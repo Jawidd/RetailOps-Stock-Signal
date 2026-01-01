@@ -35,7 +35,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] add docker requirements and scripts for CSV to Parquet conversion
 
-- [ ] Load data into a local database (Postgres)
+- [X] create script setup_warehouse_duckdb.py which
+    Build a local warehouse (DuckDB).
+    Create a schema for raw data and tables(raw.train, raw.items, raw.stores, raw.transactions, raw.oil, raw.holidays_events, raw.test)(each table comes from a Parquet file in data/bronze/favorita/)
+
 - [ ] Build 1 clean analytics table (daily store KPIs)
 - [ ] Create 1 simple dashboard page (screenshots)
 - [ ] Add a few basic data quality checks
