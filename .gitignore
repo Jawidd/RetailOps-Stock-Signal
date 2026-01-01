@@ -2,6 +2,9 @@
 data/raw/
 data/bronze/**
 .env
+Todo.md
+warehouse/
+
 
 # Allow keeping folders/structure in git
 !data/raw/.gitkeep
@@ -20,3 +23,4 @@ data/bronze/**
 # data/processed/**
 # *.parquet
 # *.duckdb
+
