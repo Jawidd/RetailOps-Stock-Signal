@@ -1,0 +1,13 @@
+#Raw Data folders
+data/raw/
+# data/synthetic/
+# data/processed/
+# data/interim/
+# data/external/
+
+# Allow keeping folders/structure in git
+!data/raw/.gitkeep
+!data/synthetic/.gitkeep
+!data/processed/.gitkeep
+!data/interim/.gitkeep
+!data/external/.gitkeep
