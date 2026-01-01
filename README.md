@@ -33,7 +33,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] add Docker & Convert CSV → Parquet(compressed, typed, columnar optimized file format)
 
-- []
+- [X] add docker requirements and scripts for CSV to Parquet conversion
 
 - [ ] Load data into a local database (Postgres)
 - [ ] Build 1 clean analytics table (daily store KPIs)
