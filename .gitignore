@@ -3,7 +3,7 @@ data/raw/
 data/bronze/**
 .env
 Todo.md
-warehouse/
+warehouse/favorita.duckdb
 
 
 # Allow keeping folders/structure in git
