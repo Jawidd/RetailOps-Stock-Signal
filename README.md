@@ -26,10 +26,14 @@ This project will show I can build an end-to-end data workflow (and later add ML
 ### Week 1 (MVP)
 - [X] Create a repo structure
 
-- [ ] Generate or download a dataset (sales + inventory):
-    - I selected https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data and downloaded(kaggle competitions download -c favorita-grocery-sales-forecasting)
-    - It seems this dataset does not include some data which is needed for this project which I will generate those data.
-    - The missing data are inventory, purchase orders, suppliers and lead times(stock delivery time from the point an item was ordered to when arrived in stock and is ready to sell).
+- [X] Generate or download a dataset (sales + inventory):
+    -select https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data and download(kaggle competitions download -c favorita-grocery-sales-forecasting)
+    - Note: It seems this dataset does not include some data which is needed for this project which I will generate those data.
+    - ((Dataset dont have inventory, purchase orders, suppliers and lead times data.))
+
+- [X] add Docker & Convert CSV → Parquet(compressed, typed, columnar optimized file format)
+
+- []
 
 - [ ] Load data into a local database (Postgres)
 - [ ] Build 1 clean analytics table (daily store KPIs)
