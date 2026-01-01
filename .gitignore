@@ -1,9 +1,7 @@
 #Raw Data folders
 data/raw/
-# data/synthetic/
-# data/processed/
-# data/interim/
-# data/external/
+data/bronze/**
+.env
 
 # Allow keeping folders/structure in git
 !data/raw/.gitkeep
@@ -11,3 +9,14 @@ data/raw/
 !data/processed/.gitkeep
 !data/interim/.gitkeep
 !data/external/.gitkeep
+
+
+
+# data/synthetic/
+# data/processed/
+# data/interim/
+# data/external/
+# data/raw/**
+# data/processed/**
+# *.parquet
+# *.duckdb
