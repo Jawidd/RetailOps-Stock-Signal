@@ -6,6 +6,7 @@ select
     store_nbr,
     transactions as transactions_count
 
+from raw.transactions
 WHERE date IS NOT NULL
   AND store_nbr IS NOT NULL
   AND transactions >= 0 

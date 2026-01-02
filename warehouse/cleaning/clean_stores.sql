@@ -3,7 +3,7 @@
 
 SELECT
     store_nbr,
-    ciry,
+    city,
     state,
     type as store_type,
     cluster as store_cluster

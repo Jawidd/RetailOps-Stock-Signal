@@ -3,21 +3,14 @@
 -- column to predict: unit_sales
 
 
-
-
-CREATE OR REPLACE TABLE cleaning.clean_train AS
 SELECT
-    cast(id as INT) as id,
+    id,
     cast(date as DATE) as date,
-    cast(store_nbr as INT) as store_nbr,
-    cast(item_nbr as INT) as item_nbr,
+    store_nbr,
+    item_nbr,
 
-    -- cast(unit_sales as FLOAT(10,2)) as unit_sales,
-    -- -- Handle unit_sales: keep negatives (they're returns), but flag them
-    -- case when unit_sales < 0 then TRUE else FALSE end as is_return,
-
-    -- Handle nulls
-    coalesce(onpromotion, 'FALSE') as onpromotion,
+    -- Handle onpromotion nulls
+    coalesce(onpromotion, FALSE) as onpromotion,
 
     -- Add derived fields useful for analysis
     extract(year from date) as sale_year,
@@ -33,7 +26,7 @@ SELECT
     end as is_wage_day,
 
 -- handle earthquake days (April 16-30, 2016) which will allways be null in test set
-    ,case 
+    case 
         when date between '2016-04-16' and '2016-04-30' 
         then TRUE 
         else FALSE 
