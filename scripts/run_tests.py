@@ -2,7 +2,7 @@ import duckdb
 
 
 warehouse_db= '../warehouse/favorita.duckdb'
-testfile= '../warehouse/tests/test_fct_store_item_daily_sales_quality.sql'
+testfile= '../warehouse/tests/test_fct_daily_sales_quality.sql'
 
 print("DATA QUALITY TESTS")
 

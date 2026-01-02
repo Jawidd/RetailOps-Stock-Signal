@@ -19,7 +19,7 @@ tables = [("clean_holidays",clean_schema_name),
           ("clean_test", clean_schema_name),
           ("clean_train", clean_schema_name),
           ("clean_transactions", clean_schema_name),
-          ("fct_store_item_daily_sales", fact_schema_name)]
+          ("fct_store_daily_sales", fact_schema_name)]
 
 
 # build each table
