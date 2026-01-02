@@ -26,18 +26,24 @@ This project will show I can build an end-to-end data workflow (and later add ML
 ### Week 1 (MVP)
 - [X] Create a repo structure
 
-- [X] Generate or download a dataset (sales + inventory):
-    -select https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data and download(kaggle competitions download -c favorita-grocery-sales-forecasting)
-    - Note: It seems this dataset does not include some data which is needed for this project which I will generate those data.
-    - ((Dataset dont have inventory, purchase orders, suppliers and lead times data.))
+- [X] Setup dataset
+    - select https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting/data and download(kaggle competitions download -c favorita-grocery-sales-forecasting)
+    - Note: It seems this dataset does not include some data which is needed for this project so those data need to be generated. ((Dataset dont have inventory, purchase orders, suppliers and lead times data.))
 
-- [X] add Docker & Convert CSV → Parquet(compressed, typed, columnar optimized file format)
+- [X] add Docker, Docker compose and docker requirements
 
-- [X] add docker requirements and scripts for CSV to Parquet conversion
+- [X] Convert data to perquet
+    - unzip data (7z to csv)
+    - create script convert_to_parquet.py
+    - store parquet files in data/bronze/favorita/
 
-- [X] create script setup_warehouse_duckdb.py which
-    Build a local warehouse (DuckDB).
-    Create a schema for raw data and tables(raw.train, raw.items, raw.stores, raw.transactions, raw.oil, raw.holidays_events, raw.test)(each table comes from a Parquet file in data/bronze/favorita/)
+- [X]  Build a local warehouse (DuckDB).
+    - create script setup_warehouse_duckdb.py
+    - Create a schema for raw data and tables(raw.train, raw.items, raw.stores, raw.transactions, raw.oil, raw.holidays_events, raw.test)(each table comes from a Parquet file in data/bronze/favorita/)
+
+- [X] Data Cleaning
+    - add sql scripts for data cleaning in warehouse/sql/ for each dataset
+    - Add&Execute run_cleaing scripts
 
 - [ ] Build 1 clean analytics table (daily store KPIs)
 - [ ] Create 1 simple dashboard page (screenshots)
