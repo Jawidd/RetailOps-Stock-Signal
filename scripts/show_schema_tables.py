@@ -40,12 +40,12 @@ for r in results:
     print(f"{r['schema']} | {r['table']} | {r['rows']}")
 
 
-print("\n=== 20 ROWS OF fct_store_item_daily_sales ===")
+print("\n=== 20 ROWS OF fct_store_daily_sales ===")
 print("-" * 70)
 
 display_df = con.execute("""
     SELECT *
-    FROM fact.fct_store_item_daily_sales
+    FROM fact.fct_store_daily_sales
     ORDER BY  sales_date
     LIMIT 2
 """).fetchdf()
