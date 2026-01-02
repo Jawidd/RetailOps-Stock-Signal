@@ -1,20 +1,20 @@
 import duckdb
+import os
 
-from pathlib import Path
-# Recommended setup for relative pathing
-SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent 
+warehouse_db= '../warehouse/favorita.duckdb'
+con= duckdb.connect(warehouse_db)
 
-WAREHOUSE_DIR = PROJECT_ROOT / "warehouse"
+if not os.path.exists(warehouse_db): print("Database file not found!")
 
-con=duckdb.connect(str(WAREHOUSE_DIR/"favorita.duckdb"))
 
 
 tables_df= con.execute("""
 select table_schema, table_name
 from information_schema.tables
-where table_type = 'BASE_TABLE'
+where table_type = 'BASE TABLE'
 """).fetchdf()
+
+if not len(tables_df): print("Database is empty!")
 
 results = []
 
@@ -27,12 +27,12 @@ for index,row in tables_df.iterrows():
 
     results.append({"schema": schema, "table":table, "rows":row_count})
 
-# ----------------------------
-# Display results
-# ----------------------------
-import pandas as pd
 
-pd.set_option("display.max_columns", None)
+
+for r in results:
+    print(f"{r['schema']} | {r['table']} | {r['rows']}")
+
+
 
 
 print("-" * 50)
@@ -40,20 +40,21 @@ for r in results:
     print(f"{r['schema']} | {r['table']} | {r['rows']}")
 
 
-print("\n=== 20 ROWS OF fct_store_daily_sales ===")
-print("-" * 70)
 
-display_df = con.execute("""
-    SELECT *
-    FROM fact.fct_store_daily_sales
-    ORDER BY  sales_date
-    LIMIT 2
-""").fetchdf()
+# import pandas as pd
+# pd.set_option("display.max_columns", None)
+# print("\n=== 20 ROWS OF fct_store_daily_sales ===")
+# print("-" * 70)
+# display_df = con.execute("""
+#     SELECT *
+#     FROM fact.fct_store_daily_sales
+#     ORDER BY  sales_date
+#     LIMIT 2
+# """).fetchdf()
+# print(display_df)
 
-print(display_df)
 # print("\n=== 20 ROWS OF CLEAN TRAIN ===")
 # print("-" * 70)
-
 # clean_train_df = con.execute("""
 #     SELECT *
 #     FROM clean.clean_train
@@ -62,7 +63,6 @@ print(display_df)
 #     ORDER BY  date
 #     LIMIT 20
 # """).fetchdf()
-
 # print(clean_train_df)
 
 con.close()
