@@ -46,6 +46,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - Add&Execute run_cleaing scripts to create the clean schema and its tables
     - script to display the clean schema tables
 
+
+
 - [ ] Build 1 clean analytics table (daily store KPIs)
 - [ ] Create 1 simple dashboard page (screenshots)
 - [ ] Add a few basic data quality checks
