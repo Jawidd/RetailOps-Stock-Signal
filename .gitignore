@@ -25,3 +25,4 @@ metabase/plugins/
 # *.parquet
 # *.duckdb
 
+logs/dbt.log
