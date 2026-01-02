@@ -50,6 +50,19 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - create a test sql query for fact. daily sales of stores
     - create a script to run testSqlQuery for fact . daily sales of stores
 
+- [X] Analysis
+    - create analysis script analyze_store_daily_sales.py to analyze fact.store_daily_sales table
+    - run the analysis script 
+    - <!-- and save the output -->
+
+- [] PostgreSQL Setup
+
+ - [] Dashboard
+    - Metabase: set up locally with Docker compose
+    - connect to DuckDB warehouse
+    - create a simple dashboard page with few charts (screenshots)
+    - save screenshots in the repo
+
 - [ ] Build 1 clean analytics table (daily store KPIs)
 - [ ] Create 1 simple dashboard page (screenshots)
 - [ ] Add a few basic data quality checks
