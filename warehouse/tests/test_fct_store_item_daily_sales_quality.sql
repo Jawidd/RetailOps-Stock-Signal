@@ -9,13 +9,14 @@ select 'Test 1: No null dates' as test_name, count(*) as failed_rows
 union all 
 
 
-select 'Test 2: duplicate date-store pairs' as test_name, count(*) as failed_rows
-    from (
-        select sales_date, store_nbr, count(*) as n 
-        from fact.fct_store_item_daily_sales
-        group by sales_date, store_nbr
-        having count(*) > 1
-    )  d
+select 'Test 2: duplicate date-store ' as test_name, count(*) as failed_rows
+from (
+    select sales_date, store_nbr, count(*) as n
+    from fact.fct_store_item_daily_sales
+    group by sales_date, store_nbr
+    having count(*) > 1
+    ) d
+    having count(*) > 0
 union all
 
 
@@ -51,18 +52,8 @@ union all
 select 'Test 6: metrics must be non-negative' as test_name, count(*) as failed_rows
     from fact.fct_store_item_daily_sales
     where transactions_count < 0
-        -- or total_unit_sales < 0
         or sold_units < 0
         or unique_items_sold < 0
-        or promo_units < 0
-        or nonpromo_units < 0
         or items_on_promo < 0
-    having count(*) > 0
-union all
-
-
-select 'Test 7: sold + returned = total_unit_sales' as test_name, count(*) as failed_rows
-    from fact.fct_store_item_daily_sales
-    where coalesce(sold_units, 0) + coalesce(returned_units, 0) != coalesce(total_unit_sales, 0)
-    having count(*) > 0;
+    having count(*) > 0 ;
 

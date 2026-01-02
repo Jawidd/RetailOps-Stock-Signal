@@ -46,7 +46,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - Add&Execute run_cleaing scripts to create the clean schema and its tables
     - script to display the clean schema tables
 
-- [] Testing
+- [X] Testing
     - create a test sql query for fact. daily sales of stores
     - create a script to run testSqlQuery for fact . daily sales of stores
 
