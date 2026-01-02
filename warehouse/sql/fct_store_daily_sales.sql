@@ -1,6 +1,8 @@
 -- Aggregates sales by store and date with context
 
-with daily_sales as(
+with 
+
+daily_sales as(
     Select
         date,
         store_nbr,
@@ -24,6 +26,25 @@ with daily_sales as(
 
     from clean.clean_train
     group by date, store_nbr
+),
+
+store_transactions as (
+    select
+        date,
+        store_nbr,
+        sum(transactions_count) as transactions_count
+    from clean.clean_transactions
+    group by date, store_nbr
+),
+
+
+-- Deduplicate holidays to one row per date (prevents join multiplication)
+holiday_flags as (
+    select
+        holiday_date,
+        max(is_actual_holiday) as is_actual_holiday
+    from clean.clean_holidays
+    group by holiday_date
 )
 
 
@@ -67,9 +88,9 @@ from daily_sales ds
 left join clean.clean_stores st
   on ds.store_nbr = st.store_nbr
 
-left join clean.clean_transactions tr
+left join store_transactions tr
   on ds.date = tr.date and ds.store_nbr = tr.store_nbr
 
-left join clean.clean_holidays hf
+left join holiday_flags hf
   on ds.date = hf.holiday_date
 order by ds.date, ds.store_nbr;

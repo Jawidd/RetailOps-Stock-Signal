@@ -6,8 +6,13 @@ sql_dir= '../warehouse/sql'
 clean_schema_name='clean'
 fact_schema_name='fact'
 
-
 db= duckdb.connect(warehouse_db)
+
+# # Drop schemas first (wipe everything clean)
+# db.execute(f"DROP SCHEMA IF EXISTS {fact_schema_name} CASCADE")
+# db.execute(f"DROP SCHEMA IF EXISTS {clean_schema_name} CASCADE")
+
+
 db.execute(f"create schema if not exists {clean_schema_name}")
 db.execute(f"create schema if not exists {fact_schema_name}")
 
