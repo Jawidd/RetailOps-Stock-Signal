@@ -1,12 +1,15 @@
 -- Clean(fix types, handles nulls, filters bad data) and standardize data 
 -- COLUMNS= item_nbr,family,class,perishable
 
-SELECT
-    store_nbr,
-    city,
-    state,
-    type as store_type,
-    cluster as store_cluster
-
-from raw.stores
-where store_nbr is not null;
+select
+    item_nbr,
+    family,
+    class,
+    perishable
+from
+    raw.items
+where
+    family is not null
+    and class is not null
+    and perishable is not null
+    and perishable in (0,1)
