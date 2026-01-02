@@ -4,6 +4,7 @@ data/bronze/**
 .env
 Todo.md
 warehouse/favorita.duckdb
+metabase/plugins/
 
 
 # Allow keeping folders/structure in git
