@@ -30,27 +30,39 @@ for index,row in tables_df.iterrows():
 # ----------------------------
 # Display results
 # ----------------------------
-print("\nSchema | Table | Rows")
-print("-" * 50)
+import pandas as pd
 
+pd.set_option("display.max_columns", None)
+
+
+print("-" * 50)
 for r in results:
     print(f"{r['schema']} | {r['table']} | {r['rows']}")
 
 
-
-
-print("\n=== 20 ROWS OF CLEAN TRAIN ===")
+print("\n=== 20 ROWS OF fct_store_item_daily_sales ===")
 print("-" * 70)
 
-clean_train_df = con.execute("""
+display_df = con.execute("""
     SELECT *
-    FROM clean.clean_train
-    where is_wage_day is True
-    and is_earthquake_period is True
-    ORDER BY  date
-    LIMIT 20
+    FROM fact.fct_store_item_daily_sales
+    ORDER BY  sales_date
+    LIMIT 2
 """).fetchdf()
 
-print(clean_train_df)
+print(display_df)
+# print("\n=== 20 ROWS OF CLEAN TRAIN ===")
+# print("-" * 70)
+
+# clean_train_df = con.execute("""
+#     SELECT *
+#     FROM clean.clean_train
+#     where is_wage_day is True
+#     and is_earthquake_period is True
+#     ORDER BY  date
+#     LIMIT 20
+# """).fetchdf()
+
+# print(clean_train_df)
 
 con.close()
