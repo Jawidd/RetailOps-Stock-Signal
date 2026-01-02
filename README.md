@@ -56,6 +56,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - <!-- and save the output -->
 
 - [] PostgreSQL Setup
+    - load csvs into postgres
+    - add dbt,
 
  - [] Dashboard
     - Metabase: set up locally with Docker compose
