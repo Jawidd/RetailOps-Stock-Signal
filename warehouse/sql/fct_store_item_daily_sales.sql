@@ -24,21 +24,8 @@ with daily_sales as(
 
     from clean.clean_train
     group by date, store_nbr
-),
+)
 
-store_transactions as (
-    Select
-        date as transaction_date,
-        store_nbr,
-        transactions_count
-    from clean.clean_transactions
-),
-
-holiday_flags as (
-    select 
-        holiday_date,
-        is_actual_holiday
-        )
 
 select 
     ds.date as sales_date,
@@ -68,12 +55,21 @@ select
     ds.day_of_week,
     ds.is_wage_day,
     ds.is_earthquake_period,
-    DAYNAME(ds.date) AS day_name,
+    -- strftime(ds.date, '%A')
+    DAYNAME(ds.date) AS day_name, 
     -- Holiday flag
     coalesce(hf.is_actual_holiday, FALSE) as is_holiday
 
+
+
 from daily_sales ds
-    left join clean.clean_stores st on ds.store_nbr = st.store_nbr
-    left join clean.clean_transactions tr on ds.date = tr.date and ds.store_nbr = tr.store_nbr
-    left join clean.clean_holidays hf on ds.date = hf.holiday_date
-ORDER BY ds.date, ds.store_nbr ;
+
+left join clean.clean_stores st
+  on ds.store_nbr = st.store_nbr
+
+left join clean.clean_transactions tr
+  on ds.date = tr.date and ds.store_nbr = tr.store_nbr
+
+left join clean.clean_holidays hf
+  on ds.date = hf.holiday_date
+order by ds.date, ds.store_nbr;
