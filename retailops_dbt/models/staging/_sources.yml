@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw
+    database: retailops
+    schema: raw
+    tables:
+      - name: train
+      - name: stores
+      - name: items
+      - name: transactions
+      - name: holidays_events
+      - name: oil
+      - name: test
