@@ -15,7 +15,7 @@ SELECT
 
     -- Handle nulls
     cast(coalesce(onpromotion, 'False') as BOOLEAN) as onpromotion,
-
+    
     -- Add derived fields useful for analysis
     extract(year from date) as sale_year,
     extract(month from date) as sale_month,
