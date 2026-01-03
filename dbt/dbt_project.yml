@@ -29,8 +29,27 @@ clean-targets:         # directories to be removed by `dbt clean`
 # In this example config, we tell dbt to build all models in the example/
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
+
 models:
   retailops_dbt:
-    # Config indicated by + and applies to all files under models/example/
     example:
       +materialized: view
+      
+  +post-hook: |
+    {% if var('use_sample_data', false) %}
+      DELETE FROM {{ this }} WHERE random() > 0.05;
+    {% endif %}
+    
+  marts:
+    +materialized: table
+    
+  analysis:
+    +materialized: table
+
+
+# # FAST MODE (5% data everywhere)
+# dbt run --vars '{use_sample_data: true}'
+# # FULL MODE (100% data)
+# dbt run
+# # Test fast
+# dbt test --vars '{use_sample_data: true}'

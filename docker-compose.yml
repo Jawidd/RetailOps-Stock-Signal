@@ -3,9 +3,9 @@ services:
     image: postgres:16
     container_name: retailops_postgres
     environment:
-      POSTGRES_USER: retailops
-      POSTGRES_PASSWORD: retailops123
-      POSTGRES_DB: retailops
+      POSTGRES_USER:      retailops
+      POSTGRES_PASSWORD:  retailops123
+      POSTGRES_DB:        retailops
     ports:
       - "5432:5432"
     volumes:
@@ -16,6 +16,22 @@ services:
       timeout: 5s
       retries: 5
 
+      
+  metabase:
+    image: metabase/metabase:latest
+    container_name: retailops_metabase
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=retailops    
+      - MB_DB_PORT=5432
+      - MB_DB_USER=retailops       
+      - MB_DB_PASS=retailops123        
+      - MB_DB_HOST=postgres #  container name     
+
   python:
     container_name: retailops_python
     build: .
@@ -24,17 +40,10 @@ services:
       - ./:/app
     tty: true
     stdin_open: true
-
-
-
-
-  metabase:
-    image: metabase/metabase:latest
-    container_name: retailops_metabase
     ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
+      - "8080:8080"
+
+
 
 volumes:
   pgdata:

@@ -42,12 +42,11 @@ store_transactions as (
 holiday_flags as (
     select
         holiday_date,
-        true as is_holiday,
-        is_actual_holiday
+        bool_or(is_actual_holiday) as is_actual_holiday
     from  {{ ref('stg_holidays') }}
     where is_actual_holiday = true
-    AND holiday_locale IN ('National', 'Regional')
-    group by holiday_date
+    and holiday_locale in ('National', 'Regional')
+    group by 1
 )
 
 
