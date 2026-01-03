@@ -14,7 +14,7 @@
     sum(total_units_sold) as total_units_sold,
     avg(total_units_sold) as avg_daily_units_sales
   from {{ ref('mart_store_daily_sales') }}
-  group by month
+  group by date_trunc('month', saledate)
   order by month
 )
 
