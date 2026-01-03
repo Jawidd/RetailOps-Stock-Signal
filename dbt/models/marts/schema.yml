@@ -3,14 +3,17 @@ version: 2
 models:
   - name: mart_store_daily_sales
     description: "Daily sales aggregated by store with context"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - saledate
+            - store_nbr
     columns:
-      - name: sale_date
+      - name: saledate
         description: "Date of sale"
         tests:
           - not_null
-          - unique:
-              config:
-                where: "store_nbr IS NOT NULL"
+
       - name: store_nbr
         description: "Store number"
         tests:
@@ -18,14 +21,32 @@ models:
           - relationships:
               to: ref('stg_stores')
               field: store_nbr
-      - name: total_unit_sales
-        description: "Total units sold (including returns)"
+
+      - name: city
+        description: "Store city"
         tests:
           - not_null
-      - name: promo_unit_ratio
-        description: "Ratio of promo units to total units"
+
+      - name: total_units_sold
+        description: "Total units sold"
+        tests:
+          - not_null
+
+
+      - name: transactions_count
+        description: "Transaction count"
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
-              max_value: 1
-              inclusive: true
+
+      - name: promo_units
+        description: "Promo units sold"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: returned_units
+        description: "Returned units"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0

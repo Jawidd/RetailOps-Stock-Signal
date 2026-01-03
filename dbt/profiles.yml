@@ -9,4 +9,4 @@ retailops_dbt:
       port: 5432
       dbname: retailops
       schema: analytics
-      threads: 4
+      threads: 6
