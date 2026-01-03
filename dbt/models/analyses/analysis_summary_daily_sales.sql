@@ -1,10 +1,11 @@
 {{
   config(
-    materialized='table',
+    materialized='view',
     tags=['analysis', 'metabase']
   )
 }}
 
+--  01 summary
 with summary as (
   select 
     count(distinct saledate) as total_days,
@@ -14,9 +15,5 @@ with summary as (
   from {{ ref('mart_store_daily_sales') }}
 )
 
-select 'summary' as analysis_type, 
-       total_days,
-       total_stores,
-       total_unit_sales_amount,
-       avg_daily_units_sales
-from summary
+
+select 'summary' as analysis_type, * from summary
