@@ -47,6 +47,7 @@ holiday_flags as (
     from  {{ ref('stg_holidays') }}
     where is_actual_holiday = true
     AND holiday_locale IN ('National', 'Regional')
+    group by holiday_date
 )
 
 
