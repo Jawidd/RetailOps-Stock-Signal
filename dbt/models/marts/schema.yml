@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: mart_store_daily_sales
+    description: "Daily sales aggregated by store with context"
+    columns:
+      - name: sale_date
+        description: "Date of sale"
+        tests:
+          - not_null
+          - unique:
+              config:
+                where: "store_nbr IS NOT NULL"
+      - name: store_nbr
+        description: "Store number"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_stores')
+              field: store_nbr
+      - name: total_unit_sales
+        description: "Total units sold (including returns)"
+        tests:
+          - not_null
+      - name: promo_unit_ratio
+        description: "Ratio of promo units to total units"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true

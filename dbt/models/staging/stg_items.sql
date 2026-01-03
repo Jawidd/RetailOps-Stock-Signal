@@ -1,7 +1,7 @@
 -- items_COLUMNS= item_nbr,family,class,perishable
 
 SELECT
-    item_nbr,
+    cast(item_nbr as int) as item_nbr,
     family,
     class,
     perishable
