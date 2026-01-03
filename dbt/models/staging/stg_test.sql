@@ -9,10 +9,6 @@ SELECT
     cast(store_nbr as int) as store_nbr,
     cast(item_nbr as int) as item_nbr,
 
-    case 
-        when cast(unit_sales as double precision) <0 then true 
-        else false 
-    end as is_return,
 
     coalesce(   cast(onpromotion as BOOLEAN)    ,FALSE) as onpromotion,
     
@@ -37,5 +33,5 @@ FROM {{ source('raw', 'test') }}
 where 
     date is not null
     and store_nbr is not null
-    and item_nbr is not null;
+    and item_nbr is not null
 

@@ -26,3 +26,4 @@ metabase/plugins/
 # *.duckdb
 
 logs/dbt.log
+.logs/dbt.log

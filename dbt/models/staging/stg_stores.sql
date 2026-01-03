@@ -11,4 +11,4 @@ SELECT
 FROM {{ source('raw', 'stores') }}
 
 where
-    store_nbr is not null;
+    store_nbr is not null

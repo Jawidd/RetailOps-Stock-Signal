@@ -13,8 +13,8 @@ def connect_pg():
         host=os.getenv("PG_HOST", "postgres"),
         port=os.getenv("PG_PORT", "5432"),
         dbname=os.getenv("PG_DB", "retailops"),
-        user=os.getenv("PG_USER", "retail"),
-        password=os.getenv("PG_PASS", "retail"),
+        user=os.getenv("PG_USER", "retailops"),
+        password=os.getenv("PG_PASS", "retailops123"),
     )
 
 def ensure_schema(cur):
