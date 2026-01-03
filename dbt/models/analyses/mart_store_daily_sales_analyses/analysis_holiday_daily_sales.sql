@@ -8,9 +8,9 @@
 
 
 -- 05 holiday vs non-holiday sales
- holiday_non_holiday_sales as (
+ with holiday_non_holiday_sales as (
   select
-  case when holiday_flg = 1 then 'holiday' else 'non-holiday' end as holiday_type,
+  case when is_holiday  then 'holiday' else 'non-holiday' end as holiday_type,
     sum(total_units_sold) as total_units_sold,
     avg(total_units_sold) as avg_daily_units_sales
   from {{ ref('mart_store_daily_sales') }}
