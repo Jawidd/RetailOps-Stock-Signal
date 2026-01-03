@@ -10,6 +10,7 @@
  with earthquake_days_non_earthquake_days_sales as (
   select
     case when is_earthquake_period  then 'earthquake_days' else 'non_earthquake_days' end as earthquake_days_type,
+    count(distinct saledate) as total_days_count,
     sum(total_units_sold) as total_units_sold,
     avg(total_units_sold) as avg_daily_units_sales
   from {{ ref('mart_store_daily_sales') }}

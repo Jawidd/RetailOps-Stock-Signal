@@ -10,12 +10,14 @@
 -- 04 Monthly unit Sales Trend 
  with monthly_sales_trend as (
   select
-    date_trunc('month', saledate) as month,
+    extract(month from saledate) as month_number,
+    to_char(saledate, 'Mon') as month_name,
     sum(total_units_sold) as total_units_sold,
     avg(total_units_sold) as avg_daily_units_sales
   from {{ ref('mart_store_daily_sales') }}
-  group by date_trunc('month', saledate)
-  order by month
+  group by
+    extract(month from saledate),
+    to_char(saledate, 'Mon')
 )
 
 

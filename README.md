@@ -57,11 +57,20 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] PostgreSQL Setup
     - load csvs into postgres
+
+- [X] DBT setup
     - create dbt project (dbt initiate)
     - create dbt stage sql queries
     - run stage_sql_queries (dbt run) to create stage tables
     - create dbt daily_sales mart, run all models again
     - connect to metabase
+    - create dbt analysis for daily_sales mart
+
+- [] Metabase Dashboards
+    - create dashboard from daily_sales analysis
+    - save dashboards and charts as pdf and png
+    
+
 
 
 
