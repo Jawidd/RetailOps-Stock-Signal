@@ -5,8 +5,8 @@
 
 SELECT
     cast(date as date) as date,
-    store_nbr,
-    transactions
+    cast(store_nbr as int) as store_nbr,
+    cast(transactions as int) as transactions
 
 FROM {{ source('raw', 'transactions') }}
 

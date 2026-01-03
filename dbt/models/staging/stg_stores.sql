@@ -2,7 +2,7 @@
 
 
 SELECT
-    store_nbr,
+    cast(store_nbr as int) as store_nbr,
     city,
     state,
     type as store_type,
