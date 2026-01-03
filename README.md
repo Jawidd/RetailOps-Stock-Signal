@@ -57,8 +57,11 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] PostgreSQL Setup
     - load csvs into postgres
-    - create dbt project
+    - create dbt project (dbt initiate)
     - create dbt stage sql queries
+    - run stage_sql_queries (dbt run) to create stage tables
+    - 
+
 
 
  - [] Dashboard

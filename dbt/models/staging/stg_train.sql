@@ -38,5 +38,5 @@ where
     date is not null
     and store_nbr is not null
     and unit_sales is not null
-    and item_nbr is not null;
+    and item_nbr is not null
 

@@ -12,5 +12,5 @@ FROM {{ source('raw', 'transactions') }}
 
 where
     date is not null
-    store_nbr is not null
-    and transactions is not null;
+    and store_nbr is not null
+    and transactions is not null

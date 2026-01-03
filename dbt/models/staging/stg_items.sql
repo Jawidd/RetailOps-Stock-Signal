@@ -8,7 +8,7 @@ SELECT
 
 FROM {{source('raw','items')}}
 
-where item_nbr is not null;
+where item_nbr is not null
 
     
 

@@ -7,4 +7,4 @@ SELECT
 FROM {{ source('raw', 'oil') }}
 
 where 
-    date is not null;
+    date is not null
