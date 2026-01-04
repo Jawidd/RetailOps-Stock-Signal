@@ -27,3 +27,4 @@ metabase/plugins/
 
 logs/dbt.log
 .logs/dbt.log
+mailmap.txt
