@@ -1,19 +1,14 @@
-FROM rocker/r-ver:4.3.3
-
-WORKDIR /app
+FROM rocker/tidyverse:4.3.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libxml2-dev \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+  libpq-dev pandoc \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN R -e "install.packages(c( \
-    'tidyverse','readr','dplyr','ggplot2', \
-    'lubridate','janitor', \
-    'DBI','RPostgres' \
+    'data.table','skimr','DataExplorer', \
+    'logger','janitor','glue','assertr','validate','scales','patchwork' \
 ), repos='https://cloud.r-project.org')"
 
+WORKDIR /app
+COPY . /app
 CMD ["bash"]

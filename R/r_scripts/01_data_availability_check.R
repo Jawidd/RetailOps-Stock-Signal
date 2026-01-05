@@ -1,36 +1,40 @@
 # scripts/01_extract_data.R
 # CSV extraction + loading handled by: scripts/extract_favorita_7z.sh and load_csv_to_postgres.py
 
-library(DBI)
-library(RPostgres)
-library(dplyr)
-library(logger)
-library(glue)
-library(tibble)
+suppressPackageStartupMessages({
+  library(DBI)
+  library(RPostgres)
+  library(dplyr)
+  library(logger)
+  library(glue)
+  library(tibble)
+})
 
 
-log_info("=", rep("=",60))
+
+
+log_info("{line}", line = paste(rep("=", 60), collapse = ""))
 log_info("data availability check (postgres)")
 
 SCHEMA <- Sys.getenv("PG_SCHEMA", "raw")
 EXPECTED_TABLES <- c("stores", "items", "transactions", "oil", "holidays_events", "test", "train")
 
-con <- dbconnect(
+con <- DBI::dbConnect(
     RPostgres::Postgres(),
     host    =Sys.getenv("PG_HOST","postgres"),
     port    =as.integer(Sys.getenv("PG_PORT","5432")),
     dbname  =Sys.getenv("PG_DB","retailops"),
-    username=Sys.getenv("PG_USER","reatailops"),
-    password=Sys.getenv("PG_PASS","reatailops123")
+    user    =Sys.getenv("PG_USER","retailops"),
+    password=Sys.getenv("PG_PASS","retailops123")
     )
-on.exit( try(dbDisconnect(con),silent=TRUE), add=TRUE)
+on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 
 existing <- dbGetQuery(
     con,
     "select table_name
     from information_schema.tables
     where table_schema= $1",
-    params,list(SCHEMA)
+    params = list(SCHEMA)
 )$table_name
 
 missing_tables <- setdiff(EXPECTED_TABLES, existing)
@@ -59,7 +63,11 @@ mutate(
     )
   )  %>%
   ungroup()
-  results_path <- file.path(PATHS$output, "01_postgres_raw_table_check.csv")
+
+  out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+  results_path <- file.path(out_dir, "01_postgres_raw_table_check.csv")
   write.csv(table_checks, results_path, row.names = FALSE)
   log_info("Postgres raw table check saved to {results_path}")
 
