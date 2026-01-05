@@ -66,7 +66,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - connect to metabase
     - create dbt analysis for daily_sales mart
 
-- [] Metabase Dashboards
+- [X] Metabase Dashboards
     - create dashboard from daily_sales analysis
     - save dashboards and charts as pdf and png
     
