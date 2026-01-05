@@ -1,6 +1,5 @@
-# scripts/01_extract_data.R
-# CSV extraction + loading handled by: scripts/extract_favorita_7z.sh and load_csv_to_postgres.py
-
+# scripts/01_data_availability_check
+source("../utils/db.R")
 suppressPackageStartupMessages({
   library(DBI)
   library(RPostgres)
@@ -10,24 +9,22 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
-
-
-
 log_info("{line}", line = paste(rep("=", 60), collapse = ""))
 log_info("data availability check (postgres)")
+
+
+
+
 
 SCHEMA <- Sys.getenv("PG_SCHEMA", "raw")
 EXPECTED_TABLES <- c("stores", "items", "transactions", "oil", "holidays_events", "test", "train")
 
-con <- DBI::dbConnect(
-    RPostgres::Postgres(),
-    host    =Sys.getenv("PG_HOST","postgres"),
-    port    =as.integer(Sys.getenv("PG_PORT","5432")),
-    dbname  =Sys.getenv("PG_DB","retailops"),
-    user    =Sys.getenv("PG_USER","retailops"),
-    password=Sys.getenv("PG_PASS","retailops123")
-    )
+
+
+con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
+
+
 
 existing <- dbGetQuery(
     con,
