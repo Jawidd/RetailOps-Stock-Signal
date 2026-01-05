@@ -91,16 +91,15 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - Install necessary packages (archive, DBI, RPostgres, DataExplorer, etc.)
     - Configure connection to existing PostgreSQL
 
-2. [] Data Extraction (01_extract_data.R)
-    - Decompress .7z files using `archive` package
-    - Validate file integrity
-    - Log extraction results
+2. [X] Data availability check
+    - connect to database and check each file exists in raw schema
+    - check row count for each table and save results to outpu/
 
-3. [] Raw Data Validation (02_validate_raw.R)
-    - Profile each dataset (rows, columns, types)
-    - Check for duplicates, nulls, outliers
-    - Generate data quality report
-    - Create data dictionary
+3. [] Data quality check
+    - check row number
+    - 
+
+
 
 
 

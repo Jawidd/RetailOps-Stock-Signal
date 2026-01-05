@@ -1,28 +1,19 @@
+source("../utils/db.R")
 library(DBI)
 library(RPostgres)
+library(logger)
 
-cat("Testing Postgres connection...\n")
+log_info("{line}", line = paste(rep("=", 60), collapse = ""))
+log_info("data availability check (postgres)")
 
-con <- tryCatch(
-  {
-    dbConnect(
-      RPostgres::Postgres(),
-      host = "postgres",
-      dbname = "retailops",
-      user = "retailops",
-      password = "retailops123",
-      port = 5432
-    )
-  },
-  error = function(e) {
-    stop("Connection failed: ", e$message)
-  }
-)
+con <- connect_postgres()
+on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
+
 
 cat("Connected successfully\n")
 
 res <- dbGetQuery(con, "select current_database() as db, current_user as user, now() as time;")
-print(res)
+print(,res)
 
 dbDisconnect(con)
 cat("Connection closed\n")
