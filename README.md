@@ -68,21 +68,33 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] Metabase Dashboards
     - create dashboard from daily_sales analysis
-    - save dashboards and charts as pdf and png
+    - save dashboards and charts as pdf and png in /dbt/snapshots
     
 
+### Week 1 (Using R)
+
+
+## Implementation Tasks
+
+1. [X] Docker Setup
+    - Create  R environment
+    - Install necessary packages (archive, DBI, RPostgres, DataExplorer, etc.)
+    - Configure connection to existing PostgreSQL
+
+2. [] Data Extraction (01_extract_data.R)
+    - Decompress .7z files using `archive` package
+    - Validate file integrity
+    - Log extraction results
+
+3. [] Raw Data Validation (02_validate_raw.R)
+    - Profile each dataset (rows, columns, types)
+    - Check for duplicates, nulls, outliers
+    - Generate data quality report
+    - Create data dictionary
 
 
 
- - [] Dashboard
-    - Metabase: set up locally with Docker compose
-    - connect to DuckDB warehouse
-    - create a simple dashboard page with few charts (screenshots)
-    - save screenshots in the repo
 
-- [ ] Build 1 clean analytics table (daily store KPIs)
-- [ ] Create 1 simple dashboard page (screenshots)
-- [ ] Add a few basic data quality checks
 
 ### Next (after MVP)
 - [ ] Add dbt models + tests
