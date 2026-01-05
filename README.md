@@ -7,9 +7,19 @@ Later, I will add **forecasting + reorder recommendations**.
 ---
 
 ## Current status
-**Not started yet.**  
-This README will be updated as I complete each step.
+- dataset:  Favorita Grocery Sales Forecasting (Kaggle)
+- database: PostgreSQL 
+- Data Build Tool: dbt-core with dbt-postgres adapter
+- Pipeline Milestones:
+    - Staging Layer: Completed. Created stg_ models for raw stores, oil prices, and transactions data to standardize field names and data types.
+    Marts Layer: Completed. Developed a mart_daily_sales model that aggregates unit sales by date and store to provide a clean source for reporting.
+- Visualization:
+    Tool: Metabase (Connected to PostgreSQL).
+    Dashboard: Built a "Daily Sales Overview" dashboard featuring time-series trends and store performance.
+- Artifacts:
+    /dbt/snapshots/Metabase - Mart_daily_sales_Dash.pdf
 
+    
 ---
 
 ## Goal (why I’m building this)

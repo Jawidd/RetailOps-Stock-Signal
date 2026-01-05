@@ -7,9 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN R -e "install.packages(c('tidyverse','readr','dplyr','ggplot2','lubridate','janitor'), repos='https://cloud.r-project.org')"
+RUN R -e "install.packages(c( \
+    'tidyverse','readr','dplyr','ggplot2', \
+    'lubridate','janitor', \
+    'DBI','RPostgres' \
+), repos='https://cloud.r-project.org')"
 
 CMD ["bash"]
