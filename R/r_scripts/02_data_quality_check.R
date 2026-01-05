@@ -32,11 +32,11 @@ Tables <- list(
 con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 
-###### FUNCTION LIST ######
-### DB QOUTE IDENTIFIER FUNCTION
+######      FUNCTION LIST       ######
+### DB_QOUTE_IDENTIFIER_FUNCTION
 q_ident <- function(x) DBI::dbQuoteIdentifier(con,x)
 
-### ROW COUNT FUNCTION
+### ROW_COUNT_FUNCTION
 get_row_count <- function(schema, table){
     DBI::dbGetQuery(
         con,
@@ -44,43 +44,80 @@ get_row_count <- function(schema, table){
     )$n[1]
 }
 
+### GET_COLUMN_METADATA_FUNCTION
+get_columns_meta <- function(schema,table){
+    DBI::dbGetQuery(
+        con,
+        "select
+            column_name,
+            data_type,
+            is_nullable
+        from information_schema.columns
+        where table_schema = $1 and table_name = $2
+        order by ordinal_position",
+        params = list(schema,table)
+    )
+}
+
+### GET_PG_STAT_FUNCTION
+get_pg_stat <- function(schema, table) {
+  DBI::dbGetQuery(
+    con,
+    "select
+       schemaname,
+       tablename,
+       attname as column_name,
+       null_frac,
+       avg_width,
+       n_distinct,
+       most_common_vals::text as most_common_vals,
+       most_common_freqs::text as most_common_freqs,
+       histogram_bounds::text as histogram_bounds,
+       correlation
+     from pg_stats
+     where schemaname = $1 and tablename = $2",
+    params = list(schema, table)
+  )
+}
 
 
-###### RUN ######
+######      RUN      ######
 summary_rows <- tibble()
 column_profile <- tibble()
 issues <- tibble()
 
 for (tbl in names(Tables)){
-    pk <- Tables[[tbl]]$pk
-    date_col <- Tables[[tbl]]$date_col
+    # pk <- Tables[[tbl]]$pk
+    # date_col <- Tables[[tbl]]$date_col
     log_info("=== Checking {SCHEMA}.{tbl} ")
 
-    # summary_rows <- bind_rows(summary_rows, tibble(
-    #     schema = SCHEMA,
-    #     table = tbl,
-    #     row_count= NA_real_,
-    #     pk_duplicate_groups= NA_real_,
-    #     date_min = NA_character_,
-    #     date_max = NA_character_
-    # ))
-    row_count <- as.numeric(get_row_count(SCHEMA, tbl)) 
 
+
+#  1.Table summary
+    row_count <- as.numeric(get_row_count(SCHEMA, tbl)) 
     summary_rows <-bind_rows(summary_rows, tibble(
     schema= SCHEMA,
     table= tbl,
-    row_count = row_count
-
+    row_count = row_count,
     ))
-    out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
-    dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-    summary_path <- file.path(out_dir, "02_data_quality_check.csv")
-
-    write.csv(summary_rows, summary_path, row.names = FALSE)
-
-    log_info("summary_rows   saved to {summary_path}")
-
-
+#  2. column_profile
+    column_metadata <- get_columns_meta(SCHEMA,tbl) %>% as_tibble()
+    column_stats    <- get_pg_stat(SCHEMA, tbl) %>% 
+        as_tibble() %>%
+             mutate(schema = SCHEMA, table = tbl)
+    column_profile <- bind_rows(column_profile, column_stats)
+    
 }
 
+out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+
+summary_path <- file.path(out_dir, "02_data_quality_summary.csv")
+cols_path    <- file.path(out_dir, "02_data_dictionary_pg_stats.csv")
+
+write.csv(summary_rows, summary_path, row.names = FALSE)
+write.csv(column_profile, cols_path, row.names = FALSE)
+
+log_info("summary_rows   saved to {summary_path}")
