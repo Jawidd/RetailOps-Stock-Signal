@@ -1,13 +1,15 @@
 # scripts/02_data_quality_check
+
 source("../utils/db.R")
+
 suppressPackageStartupMessages({
-  library(tidyverse)
-  library(data.table)
-  library(skimr)
-  library(DataExplorer)
+  library(DBI)
+  library(dplyr)
+  library(tibble)
   library(logger)
   library(glue)
-  library(janitor)
+  library(readr)
+
 })
 
 
@@ -35,6 +37,8 @@ on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 ######      FUNCTION LIST       ######
 ### DB_QOUTE_IDENTIFIER_FUNCTION
 q_ident <- function(x) DBI::dbQuoteIdentifier(con,x)
+
+
 
 ### ROW_COUNT_FUNCTION
 get_row_count <- function(schema, table){
@@ -80,6 +84,23 @@ get_pg_stat <- function(schema, table) {
   )
 }
 
+### GET_PK_DUPLICATE_COUNT_FUNCTION
+get_pk_duplicate_count <- function(schema, table, pk_cols) {
+  cols <- paste(sapply(pk_cols, q_ident), collapse = ", ")
+  DBI::dbGetQuery(
+    con,
+    glue("
+      select count(*)::bigint as n
+      from (
+        select {cols}
+        from {q_ident(schema)}.{q_ident(table)}
+        group by {cols}
+        having count(*) > 1
+      ) d
+    ")
+  )$n[1]
+}
+
 
 ######      RUN      ######
 summary_rows <- tibble()
@@ -87,28 +108,45 @@ column_profile <- tibble()
 issues <- tibble()
 
 for (tbl in names(Tables)){
-    # pk <- Tables[[tbl]]$pk
-    # date_col <- Tables[[tbl]]$date_col
-    log_info("=== Checking {SCHEMA}.{tbl} ")
+  pk <- Tables[[tbl]]$pk
+  # date_col <- Tables[[tbl]]$date_col
+  log_info("=== Checking {SCHEMA}.{tbl} ")
 
 
+  # 1.Table summary
+  n_rows <- as.numeric(get_row_count(SCHEMA, tbl)) 
+  summary_rows <-bind_rows(summary_rows, tibble(
+  schema= SCHEMA,
+  table= tbl,
+  row_count = n_rows
+  ))
 
-#  1.Table summary
-    row_count <- as.numeric(get_row_count(SCHEMA, tbl)) 
-    summary_rows <-bind_rows(summary_rows, tibble(
-    schema= SCHEMA,
-    table= tbl,
-    row_count = row_count,
+
+  # 2. column_profile
+  # column_metadata <- get_columns_meta(SCHEMA,tbl) %>% as_tibble()
+  column_stats    <- get_pg_stat(SCHEMA, tbl) %>% 
+      as_tibble() %>%
+            mutate(schema = SCHEMA, table = tbl)
+  column_profile <- bind_rows(column_profile, column_stats)
+
+
+  # 3. check issues
+  row_limit <- 100000 # NOTE: ROW LIMIT FOR Primary key duplicates check (EXPENSIVE)
+  if(n_rows < row_limit) {
+    pk_duplicates <- as.numeric(get_pk_duplicate_count(SCHEMA, tbl, pk))
+    if (pk_duplicates > 0) {
+      issues <- bind_rows(issues, tibble(
+      severity = "FAIL",
+      table = tbl,
+      check = "duplicate_pk",
+      detail = glue("{pk_duplicates} duplicated PK group(s) on [{paste(pk, collapse = ', ')}]")
     ))
+    } 
+  }
 
-#  2. column_profile
-    column_metadata <- get_columns_meta(SCHEMA,tbl) %>% as_tibble()
-    column_stats    <- get_pg_stat(SCHEMA, tbl) %>% 
-        as_tibble() %>%
-             mutate(schema = SCHEMA, table = tbl)
-    column_profile <- bind_rows(column_profile, column_stats)
-    
 }
+
+
 
 out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
@@ -116,8 +154,11 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 summary_path <- file.path(out_dir, "02_data_quality_summary.csv")
 cols_path    <- file.path(out_dir, "02_data_dictionary_pg_stats.csv")
+issues_path <- file.path(out_dir, "02_quality_issues.csv")
 
 write.csv(summary_rows, summary_path, row.names = FALSE)
 write.csv(column_profile, cols_path, row.names = FALSE)
+write.csv(issues, issues_path, row.names = FALSE)
+# readr::write_csv(issues, issues_path)
 
 log_info("summary_rows   saved to {summary_path}")
