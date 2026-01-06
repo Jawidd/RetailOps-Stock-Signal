@@ -18,8 +18,8 @@ log_info("03_clean_data")
 
 SCHEMA_RAW <- Sys.getenv("PG_SCHEMA", "raw")
 SCHEMA_CLEAN_DATA <- Sys.getenv("PG_SCHEMA", "r_stage")
-earthquake_start <- Sys.getenv("earthquake_start", "2016-04-16")
-earthquake_end <- Sys.getenv("earthquake_end", "2016-04-30")
+earthquake_start <- as.Date(Sys.getenv("earthquake_start", "2016-04-16"))
+earthquake_end <- as.Date(Sys.getenv("earthquake_end", "2016-04-30"))
 
 con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
@@ -82,7 +82,7 @@ clean_items <- function(con, raw_schema = SCHEMA_RAW){
                     item_nbr = as.integer(item_nbr),
                     family= family,
                     class= as.integer(class),
-                    perishable = as.logical(as.integer(perishable)),
+                    perishable = as.logical(as.integer(perishable))
                     )
     log_info("cleaned {nrow(items)} items")
     items 
@@ -98,7 +98,7 @@ clean_oil <- function(con, raw_schema = SCHEMA_RAW){
             filter(!is.na(dcoilwtico) ) %>%
                 mutate(
                     date   = as.Date(date),
-                    dcoilwtico = as.double(dcoilwtico),
+                    dcoilwtico = as.double(dcoilwtico)
                     )%>%
                         arrange(date) %>%
                                         mutate(dcoilwtico = dcoilwtico - lag(dcoilwtico, default = NA))  %>%
@@ -137,7 +137,7 @@ clean_stores <- function(con, raw_schema = SCHEMA_RAW){
 clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
   log_info("Cleaning transactions...")
 
-  transactions <- pg_read(con, raw_schema, "transactions") %>%
+  transactions <- pg_read_table(con, raw_schema, "transactions") %>%
     clean_names() %>%
     filter(!is.na(date) & !is.na(store_nbr) & !is.na(transactions)) %>%
     mutate(
@@ -153,10 +153,10 @@ clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
 
 
 ### CLEAN_Train_FUNCTION
-clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
+clean_train <- function(con, raw_schema = SCHEMA_RAW) {
   log_info("Cleaning Train ")
 
-  train <- pg_read(con, raw_schema, "train") %>%
+  train <- pg_read_table(con, raw_schema, "train") %>%
     clean_names() %>%
     filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr) & !is.na(unit_sales)) %>%
     mutate(
@@ -183,12 +183,12 @@ clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
 }
 
 ### CLEAN_TestFUNCTION
-clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
+clean_test <- function(con, raw_schema = SCHEMA_RAW) {
   log_info("Cleaning test ")
 
-  test <- pg_read(con, raw_schema, "test") %>%
+  test <- pg_read_table(con, raw_schema, "test") %>%
     clean_names() %>%
-    filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr) & !is.na(unit_sales)) %>%
+    filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr)) %>%
     mutate(
       id        = as.integer(id),
       date      = as.Date(date),
@@ -226,5 +226,14 @@ cleaned_data$items <- clean_items(con)
 cleaned_data$oil <- clean_oil(con)
 cleaned_data$stores <- clean_stores(con)
 cleaned_data$transactions <- clean_transactions(con)
-cleaned_data$train <- clean_train(con)
+# cleaned_data$train <- clean_train(con)
 cleaned_data$test  <- clean_test(con)
+
+log_info("Writing cleaned tables to Postgres schema {SCHEMA_CLEAN_DATA}...")
+
+for(name in names(cleaned_data)){
+
+    out_table <- paste0("stage_", name)
+    pg_write_table(con,SCHEMA_CLEAN_DATA,out_table,cleaned_data[[name]])
+    log_info("wrote {SCHEMA_CLEAN_DATA}.{out_table} ({nrow(cleaned_data[[name]])} rows)")
+}

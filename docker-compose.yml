@@ -30,6 +30,11 @@ services:
       postgres:
         condition: service_healthy
 
+    mem_limit: 4g
+    memswap_limit: 4g     
+    cpus: "2.0"
+    shm_size: "1g"   
+
 
 
   metabase:
