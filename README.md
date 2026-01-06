@@ -95,13 +95,14 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - connect to database and check each file exists in raw schema
     - check row count for each table and save results to outpu/
 
-3. [] Data quality check
+3. [X] Data quality check
     - check row number
     - add&join columndata and pg_stat 
     - check pk_duplicate
     - check pk_nullabe
 
-
+4. [] Data cleaning 
+    - write cleaing functions for holiday_events, items, stores,
 
 
 
