@@ -103,6 +103,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 4. [] Data cleaning 
     - write cleaing functions for holiday_events, items, stores,
+     train, test, oil, transactions
 
 
 
