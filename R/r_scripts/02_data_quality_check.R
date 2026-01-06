@@ -123,26 +123,63 @@ for (tbl in names(Tables)){
 
 
   # 2. column_profile
-  # column_metadata <- get_columns_meta(SCHEMA,tbl) %>% as_tibble()
-  column_stats    <- get_pg_stat(SCHEMA, tbl) %>% 
-      as_tibble() %>%
-            mutate(schema = SCHEMA, table = tbl)
-  column_profile <- bind_rows(column_profile, column_stats)
+  column_profile_tbl <- get_columns_meta(SCHEMA, tbl) %>%
+    as_tibble() %>%
+    left_join(
+      get_pg_stat(SCHEMA, tbl) %>%
+        as_tibble() %>%
+        select(-schemaname, -tablename),  
+      by = "column_name"
+    ) %>%
+    mutate(schema = SCHEMA, table = tbl) %>%  
+    select(schema, table, everything())       
+  column_profile <- bind_rows(column_profile, column_profile_tbl)
+
+  
+  # 3. check issues
+  # 3a) PK columns nullable?
+  pk_nullable <- column_profile_tbl %>%
+    filter(column_name %in% pk, toupper(is_nullable) == "YES")
+
+  if (nrow(pk_nullable) > 0) {
+    issues <- bind_rows(
+      issues,
+      tibble(
+        severity = "FAIL",
+        table = tbl,
+        check = "pk_nullable",
+        detail = glue("PK column(s) nullable: {paste(pk_nullable$column_name, collapse = ', ')}")
+      )
+    )
+  }
 
 
   # 3. check issues
-  row_limit <- 100000 # NOTE: ROW LIMIT FOR Primary key duplicates check (EXPENSIVE)
-  if(n_rows < row_limit) {
+  # 3b) PK values duplicated?
+  row_limit <- 100000
+
+  if (n_rows <= row_limit) {
     pk_duplicates <- as.numeric(get_pk_duplicate_count(SCHEMA, tbl, pk))
+
     if (pk_duplicates > 0) {
-      issues <- bind_rows(issues, tibble(
-      severity = "FAIL",
-      table = tbl,
-      check = "duplicate_pk",
-      detail = glue("{pk_duplicates} duplicated PK group(s) on [{paste(pk, collapse = ', ')}]")
-    ))
-    } 
-  }
+      issues <- bind_rows(
+        issues,
+        tibble(
+          severity = "FAIL",
+          table = tbl,
+          check = "duplicate_pk",
+          detail = glue("{pk_duplicates} duplicated PK group(s) on [{paste(pk, collapse = ', ')}]")
+        ))}
+
+  } else {
+    issues <- bind_rows(
+      issues,
+      tibble(
+        severity = "INFO",
+        table = tbl,
+        check = "duplicate_pk",
+        detail = glue("Skipped (row_count={n_rows} > row_limit={row_limit})")
+      ))}
 
 }
 
@@ -162,3 +199,5 @@ write.csv(issues, issues_path, row.names = FALSE)
 # readr::write_csv(issues, issues_path)
 
 log_info("summary_rows   saved to {summary_path}")
+log_info("column_profile   saved to {cols_path}")
+log_info("issues   saved to {issues_path}")
