@@ -17,14 +17,14 @@ log_info("{line}", line = paste(rep("=", 60), collapse = ""))
 log_info("03_clean_data")
 
 SCHEMA_RAW <- Sys.getenv("PG_SCHEMA", "raw")
-SCHEMA_CLEAN_DATA <- Sys.getenv("PG_SCHEMA", "r_stage")
+SCHEMA_STAGE <- Sys.getenv("PG_SCHEMA", "r_stage")
 earthquake_start <- as.Date(Sys.getenv("earthquake_start", "2016-04-16"))
 earthquake_end <- as.Date(Sys.getenv("earthquake_end", "2016-04-30"))
 
 con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 
-DBI::dbExecute(con,glue("create schema if not exists {q_ident(SCHEMA_CLEAN_DATA)}"))
+DBI::dbExecute(con,glue("create schema if not exists {q_ident(SCHEMA_STAGE)}"))
 
 
 ######      FUNCTION LIST       ######
@@ -135,12 +135,12 @@ clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
 }
 
 
-
+set.seed(42)
 ### CLEAN_Train_FUNCTION (EXPENSIVE)
 clean_train <- function(con, raw_schema = SCHEMA_RAW) {
   log_info("Cleaning Train ")
-
-  train <- pg_read_table(con, raw_schema, "train") %>%
+  train <- dbGetQuery(con, "select * from raw.train tablesample bernoulli (5)") %>%
+  # train <- pg_read_table(con, raw_schema, "train") %>%
     clean_names() %>%
     filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr) & !is.na(unit_sales)) %>%
     mutate(
@@ -167,7 +167,7 @@ clean_train <- function(con, raw_schema = SCHEMA_RAW) {
 }
 
 ### CLEAN_Train_FUNCTION2 (USING PSQL to process)
-clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_CLEAN_DATA) {
+clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_STAGE) {
   log_info("Cleaning Train in SQL (Postgres)...")
 
   # Ensure schema exists
@@ -267,19 +267,19 @@ cleaned_data$items <- clean_items(con)
 cleaned_data$oil <- clean_oil(con)
 cleaned_data$stores <- clean_stores(con)
 cleaned_data$transactions <- clean_transactions(con)
-cleaned_data$test  <- clean_test(con)
-
-# cleaned_data$train <- clean_train(con) EXPENSIVE to Run in R, run in psql
+# cleaned_data$test  <- clean_test(con)
+cleaned_data$train <- clean_train(con) 
 # clean_train2(con)
 
 
 
-log_info("Writing cleaned tables to Postgres schema {SCHEMA_CLEAN_DATA}...")
+
+log_info("Writing cleaned tables to Postgres schema {SCHEMA_STAGE}...")
 
 for(name in names(cleaned_data)){
 
     out_table <- paste0("stage_", name)
-    pg_write_table(con,SCHEMA_CLEAN_DATA,out_table,cleaned_data[[name]])
-    log_info("wrote {SCHEMA_CLEAN_DATA}.{out_table} ({nrow(cleaned_data[[name]])} rows)")
+    pg_write_table(con,SCHEMA_STAGE,out_table,cleaned_data[[name]])
+    log_info("wrote {SCHEMA_STAGE}.{out_table} ({nrow(cleaned_data[[name]])} rows)")
 }
 

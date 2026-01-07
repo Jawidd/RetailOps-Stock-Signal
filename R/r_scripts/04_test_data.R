@@ -11,15 +11,11 @@ suppressPackageStartupMessages({
 })
 
 
-
-
-
-
 log_info("{line}", line = paste(rep("=", 60), collapse = ""))
 log_info("04_test_data")
 
 
-SCHEMA_CLEAN_DATA <- Sys.getenv("PG_SCHEMA", "r_stage")
+SCHEMA_STAGE <- Sys.getenv("PG_SCHEMA", "r_stage")
 
 con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
@@ -40,7 +36,7 @@ uniqueness_columns <- list(
   stage_items          = c("item_nbr"),
   stage_oil            = c("date"),
   stage_stores         = c("store_nbr"),
-#   stage_train          = c("date", "store_nbr", "item_nbr"),
+  stage_train          = c("date", "store_nbr", "item_nbr"),
   stage_transactions   = c("date", "store_nbr")
 )
 
@@ -50,15 +46,15 @@ not_null_columns <- list(
   stage_items          = c("item_nbr","family","class"),
   stage_oil            = c("date","oil_price"),
   stage_stores         = c("store_nbr","city","state"),
-#   stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
+  stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
   stage_transactions   = c("date", "store_nbr", "transactions")
 )
 
 # for 3-test_referential Function
 referential_columns <- list(
   list(child = "stage_transactions", child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr")
-#   ,list(child = "stage_train",        child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
-#   list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
+  ,list(child = "stage_train",        child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
+  list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
 )
 
 # for 4-test_range Function
@@ -74,7 +70,7 @@ range_columns <- list(
 # holiday-dates include upto 2017-12-31 while all other dates are upto 2017-08-31
 date_range_columns  <- list(
   list(table = "stage_transactions",   col = "date", min = "2013-01-01", max = "2017-08-31"),
-#   list(table = "stage_train",   col = "date", min = "2013-01-01", max = "2017-08-31"),
+  list(table = "stage_train",   col = "date", min = "2013-01-01", max = "2017-08-31"),
   list(table = "stage_oil",           col = "date", min = "2013-01-01", max = "2017-08-31"),
   list(table = "stage_holidays_events", col = "holiday_date", min = "2012-01-01", max = "2017-12-31")
 )
@@ -268,7 +264,7 @@ test_date_range <- function(schema, table_name, col, start_date, end_date) {
 
 # # stage tables row count
 # for(tbl in names(uniqueness_columns)) {
-#     n_rows <- get_row_count("r_stage",tbl )
+#     n_rows <- get_row_count(SCHEMA_STAGE,tbl )
 # logger::log_info(" {tbl} n_rows: {n_rows}" , tbl = tbl, n_rows = n_rows  )
 # }
 
@@ -276,21 +272,21 @@ test_date_range <- function(schema, table_name, col, start_date, end_date) {
 
 # 1 run UNIQUENESS TESTS 
 for(tbl in names(uniqueness_columns)) {
-test_uniqueness("r_stage", tbl, uniqueness_columns[[tbl]])
+test_uniqueness(SCHEMA_STAGE, tbl, uniqueness_columns[[tbl]])
 }
 logger::log_info("UNIQUENESS TESTS COMPLETED and saved to /outputs" )
 
 
 # 2 run NOT NULL TESTS 
 for(tbl in names(not_null_columns)) {
-test_not_null("r_stage", tbl, not_null_columns[[tbl]])
+test_not_null(SCHEMA_STAGE, tbl, not_null_columns[[tbl]])
 }
 logger::log_info("not_null TESTS COMPLETED and saved to /outputs" )
 
 
 # 3 run referential tests
 for (record in referential_columns) {
-  test_referential(  "r_stage",
+  test_referential(  SCHEMA_STAGE,
     record$child, record$child_col,
     record$parent, record$parent_col
   )
@@ -300,13 +296,13 @@ logger::log_info("REFERENTIAL TESTS COMPLETED and saved to /outputs")
 
 # 4 run range tests
 for (record in range_columns) {
-  test_range("r_stage", record$table, record$col, record$min, record$max)
+  test_range(SCHEMA_STAGE, record$table, record$col, record$min, record$max)
 }
 logger::log_info("RANGE TESTS COMPLETED and saved to /outputs")
 
 
 # 5 run date_range tests
 for (record in date_range_columns) {
-  test_date_range("r_stage", record$table, record$col, record$min, record$max)
+  test_date_range(SCHEMA_STAGE, record$table, record$col, record$min, record$max)
 }
 logger::log_info("DATE_RANGE TESTS COMPLETED and saved to /outputs")

@@ -22,6 +22,7 @@ Later, I will add **forecasting + reorder recommendations**.
 
 ### Notes
 - it can be holiday for stores from particular cities or states. a column should be added.
+
 ---
 
 ## Goal (why I’m building this)
@@ -106,8 +107,9 @@ This project will show I can build an end-to-end data workflow (and later add ML
 4. [X] Data cleaning 
     - write cleaing functions for holiday_events, items, stores,
      train, test, oil, transactions
-     - write alternate method for train_clean function as
+    - write alternate method for train_clean function as
       doing cleaning in R is expensive, do the cleaning in postgres
+    - Note : - train is sampled(0.05) in R_stag_train 
 
 5. [] TEST Stage(clean) DATA
     - UNIQUENESS TESTs
