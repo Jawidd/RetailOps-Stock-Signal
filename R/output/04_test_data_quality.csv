@@ -1,15 +1,18 @@
 timestamp,category,schema,table_name,test_name,status
-2026-01-07 16:18:05,UNIQUENESS,r_stage,stage_holidays_events,"Unique (holiday_date,holiday_type,locale,locale_name,description)",PASS
-2026-01-07 16:18:05,UNIQUENESS,r_stage,stage_items,Unique (item_nbr),PASS
-2026-01-07 16:18:05,UNIQUENESS,r_stage,stage_oil,Unique (date),PASS
-2026-01-07 16:18:05,UNIQUENESS,r_stage,stage_stores,Unique (store_nbr),PASS
-2026-01-07 16:18:05,UNIQUENESS,r_stage,stage_transactions,"Unique (date,store_nbr)",PASS
-2026-01-07 16:18:05,NOT_NULL,r_stage,stage_holidays_events,"NOT_NULL (holiday_date,holiday_type,locale,locale_name,description)","holiday_date -> PASS, holiday_type -> PASS, locale -> PASS, locale_name -> PASS, description -> PASS"
-2026-01-07 16:18:05,NOT_NULL,r_stage,stage_items,"NOT_NULL (item_nbr,family,class)","item_nbr -> PASS, family -> PASS, class -> PASS"
-2026-01-07 16:18:05,NOT_NULL,r_stage,stage_oil,"NOT_NULL (date,oil_price)","date -> PASS, oil_price -> PASS"
-2026-01-07 16:18:05,NOT_NULL,r_stage,stage_stores,"NOT_NULL (store_nbr,city,state)","store_nbr -> PASS, city -> PASS, state -> PASS"
-2026-01-07 16:18:05,NOT_NULL,r_stage,stage_transactions,"NOT_NULL (date,store_nbr,transactions)","date -> PASS, store_nbr -> PASS, transactions -> PASS"
-2026-01-07 16:18:05,REFERENTIAL,r_stage,stage_transactions,FK (stage_transactions.store_nbr -> stage_stores.store_nbr),PASS
-2026-01-07 16:18:06,RANGE,r_stage,stage_transactions,RANGE (transactions between 0 and 10000),PASS
-2026-01-07 16:18:06,RANGE,r_stage,stage_oil,RANGE (oil_price between 20 and 150),PASS
-2026-01-07 16:18:06,RANGE,r_stage,stage_items,RANGE (class between 1 and 10000),PASS
+2026-01-07 16:45:26,UNIQUENESS,r_stage,stage_holidays_events,"Unique (holiday_date,holiday_type,locale,locale_name,description)",PASS
+2026-01-07 16:45:26,UNIQUENESS,r_stage,stage_items,Unique (item_nbr),PASS
+2026-01-07 16:45:26,UNIQUENESS,r_stage,stage_oil,Unique (date),PASS
+2026-01-07 16:45:26,UNIQUENESS,r_stage,stage_stores,Unique (store_nbr),PASS
+2026-01-07 16:45:26,UNIQUENESS,r_stage,stage_transactions,"Unique (date,store_nbr)",PASS
+2026-01-07 16:45:26,NOT_NULL,r_stage,stage_holidays_events,"NOT_NULL (holiday_date,holiday_type,locale,locale_name,description)","holiday_date -> PASS, holiday_type -> PASS, locale -> PASS, locale_name -> PASS, description -> PASS"
+2026-01-07 16:45:26,NOT_NULL,r_stage,stage_items,"NOT_NULL (item_nbr,family,class)","item_nbr -> PASS, family -> PASS, class -> PASS"
+2026-01-07 16:45:26,NOT_NULL,r_stage,stage_oil,"NOT_NULL (date,oil_price)","date -> PASS, oil_price -> PASS"
+2026-01-07 16:45:26,NOT_NULL,r_stage,stage_stores,"NOT_NULL (store_nbr,city,state)","store_nbr -> PASS, city -> PASS, state -> PASS"
+2026-01-07 16:45:26,NOT_NULL,r_stage,stage_transactions,"NOT_NULL (date,store_nbr,transactions)","date -> PASS, store_nbr -> PASS, transactions -> PASS"
+2026-01-07 16:45:27,REFERENTIAL,r_stage,stage_transactions,FK (stage_transactions.store_nbr -> stage_stores.store_nbr),PASS
+2026-01-07 16:45:27,RANGE,r_stage,stage_transactions,RANGE (transactions between 0 and 10000),PASS
+2026-01-07 16:45:27,RANGE,r_stage,stage_oil,RANGE (oil_price between 20 and 150),PASS
+2026-01-07 16:45:27,RANGE,r_stage,stage_items,RANGE (class between 1 and 10000),PASS
+2026-01-07 16:45:27,DATE_RANGE,r_stage,stage_transactions,DATE_RANGE (date between 2013-01-01 and 2017-08-31),PASS
+2026-01-07 16:45:27,DATE_RANGE,r_stage,stage_oil,DATE_RANGE (date between 2013-01-01 and 2017-08-31),PASS
+2026-01-07 16:45:27,DATE_RANGE,r_stage,stage_holidays_events,DATE_RANGE (holiday_date between 2012-01-01 and 2017-12-31),PASS

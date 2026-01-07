@@ -61,11 +61,22 @@ referential_columns <- list(
 #   list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
 )
 
-# for 4-test_referential Function
+# for 4-test_range Function
 range_columns <- list(
   list(table = "stage_transactions", col = "transactions", min = 0, max = 10000),
-  list(table = "stage_oil",          col = "oil_price",   min = 20, max = 150),
+  list(table = "stage_oil",           col = "oil_price",   min = 20, max = 150),
   list(table = "stage_items",        col = "class",       min = 1,   max = 10000)
+)
+
+
+
+# for 5-test-date function
+# holiday-dates include upto 2017-12-31 while all other dates are upto 2017-08-31
+date_range_columns  <- list(
+  list(table = "stage_transactions",   col = "date", min = "2013-01-01", max = "2017-08-31"),
+#   list(table = "stage_train",   col = "date", min = "2013-01-01", max = "2017-08-31"),
+  list(table = "stage_oil",           col = "date", min = "2013-01-01", max = "2017-08-31"),
+  list(table = "stage_holidays_events", col = "holiday_date", min = "2012-01-01", max = "2017-12-31")
 )
 
 
@@ -132,8 +143,8 @@ test_not_null <- function(schema,table_name,cols ) {
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     readr::write_csv(test_results,
     file.path(out_dir, "04_test_data_quality.csv"))
-
 }
+
 
 ### 3-Test_Referntial_column_function
 test_referential <- function(schema, child_table, child_col, parent_table, parent_col) {
@@ -165,8 +176,6 @@ test_referential <- function(schema, child_table, child_col, parent_table, paren
   out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
   dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
   readr::write_csv(test_results, file.path(out_dir, "04_test_data_quality.csv"))
-
-
 }
 
 
@@ -205,6 +214,45 @@ test_range <- function(schema, table_name, col, min_value, max_value) {
     file.path(out_dir, "04_test_data_quality.csv")
   )
 }
+
+
+### 5-Test_date_Range_Function
+test_date_range <- function(schema, table_name, col, start_date, end_date) {
+
+  data <- pg_read_table(con, schema, table_name)
+
+  start_date <- as.Date(start_date)
+  end_date   <- as.Date(end_date)
+
+  bad_dates <- data %>%
+    dplyr::mutate(.date = as.Date(.data[[col]])) %>%
+    dplyr::filter(!is.na(.date)) %>%
+    dplyr::filter(.date < start_date | .date > end_date)
+
+  n_bad_dates <- nrow(bad_dates)
+
+  test_name <- paste0(
+    "DATE_RANGE (", col, " between ", start_date, " and ", end_date, ")"
+  )
+
+  status <- if (n_bad_dates == 0) "PASS" else paste0("FAIL (", n_bad_dates, " out of range)")
+
+  test_results <<- dplyr::add_row(
+    test_results,
+    timestamp   = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    category    = "DATE_RANGE",
+    schema      = schema,
+    table_name  = table_name,
+    test_name   = test_name,
+    status      = status
+  )
+
+  out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+  readr::write_csv(test_results, file.path(out_dir, "04_test_data_quality.csv"))
+}
+
 
 
 
@@ -254,5 +302,11 @@ logger::log_info("REFERENTIAL TESTS COMPLETED and saved to /outputs")
 for (record in range_columns) {
   test_range("r_stage", record$table, record$col, record$min, record$max)
 }
-
 logger::log_info("RANGE TESTS COMPLETED and saved to /outputs")
+
+
+# 5 run date_range tests
+for (record in date_range_columns) {
+  test_date_range("r_stage", record$table, record$col, record$min, record$max)
+}
+logger::log_info("DATE_RANGE TESTS COMPLETED and saved to /outputs")
