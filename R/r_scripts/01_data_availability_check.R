@@ -49,7 +49,7 @@ mutate(
   row_count = if (exists) {
     dbGetQuery(
       con,
-      glue("select count(*)::bigint as n from {DBI::dbQuoteIdentifier(con, SCHEMA)}.{DBI::dbQuoteIdentifier(con, table)}")
+      glue("select count(*)::bigint as n from { q_ident( SCHEMA)}.{q_ident(table)}")
       )$n[1]
       } else NA_real_,
       status = case_when(

@@ -109,6 +109,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 5. [] TEST Stage/cleaned DATA
     - UNIQUENESS TEST
+    - NOt_null test
 
 
 

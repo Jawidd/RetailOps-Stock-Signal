@@ -1,6 +1,11 @@
 timestamp,category,schema,table_name,test_name,status
-2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_holidays_events,"Unique (holiday_date,holiday_type,locale,locale_name,description)",PASS
-2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_items,Unique (item_nbr),PASS
-2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_oil,Unique (date),PASS
-2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_stores,Unique (store_nbr),PASS
-2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_transactions,"Unique (date,store_nbr)",PASS
+2026-01-07 14:15:15,UNIQUENESS,r_stage,stage_holidays_events,"Unique (holiday_date,holiday_type,locale,locale_name,description)",PASS
+2026-01-07 14:15:15,UNIQUENESS,r_stage,stage_items,Unique (item_nbr),PASS
+2026-01-07 14:15:15,UNIQUENESS,r_stage,stage_oil,Unique (date),PASS
+2026-01-07 14:15:15,UNIQUENESS,r_stage,stage_stores,Unique (store_nbr),PASS
+2026-01-07 14:15:15,UNIQUENESS,r_stage,stage_transactions,"Unique (date,store_nbr)",PASS
+2026-01-07 14:15:15,NOT_NULL,r_stage,stage_holidays_events,"NOT_NULL (holiday_date,holiday_type,locale,locale_name,description)","holiday_date -> PASS, holiday_type -> PASS, locale -> PASS, locale_name -> PASS, description -> PASS"
+2026-01-07 14:15:15,NOT_NULL,r_stage,stage_items,"NOT_NULL (item_nbr,family,class)","item_nbr -> PASS, family -> PASS, class -> PASS"
+2026-01-07 14:15:15,NOT_NULL,r_stage,stage_oil,"NOT_NULL (date,oil_price)","date -> PASS, oil_price -> PASS"
+2026-01-07 14:15:15,NOT_NULL,r_stage,stage_stores,"NOT_NULL (store_nbr,city,state)","store_nbr -> PASS, city -> PASS, state -> PASS"
+2026-01-07 14:15:15,NOT_NULL,r_stage,stage_transactions,"NOT_NULL (date,store_nbr,transactions)","date -> PASS, store_nbr -> PASS, transactions -> PASS"

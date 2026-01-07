@@ -35,10 +35,15 @@ connect_postgres <- function (
 }
 
 
+
+q_ident <- function(x) DBI::dbQuoteIdentifier(con,x)
+
+
+
 ### PG_read_TABLE_FUNCTION
 pg_read_table <- function(con,schema,table){
     DBI::dbGetQuery(con,glue(
-        "select * from {DBI::dbQuoteIdentifier(con,schema)}.{DBI::dbQuoteIdentifier(con,table)}"
+        "select * from {q_ident(schema)}.{q_ident(table)}"
         )
     )
 }
@@ -53,8 +58,13 @@ pg_write_table <- function(con,schema,table,df){
 }
 
 
-
-
+### ROW_COUNT_FUNCTION
+get_row_count <- function(schema, table){
+    DBI::dbGetQuery(
+        con,
+        glue("select count(*)::bigint as n from {q_ident(schema)}.{q_ident(table)}")
+    )$n[1]
+}
 
 
 con <- DBI::dbConnect(

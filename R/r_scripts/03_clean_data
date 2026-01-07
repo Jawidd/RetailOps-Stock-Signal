@@ -24,7 +24,7 @@ earthquake_end <- as.Date(Sys.getenv("earthquake_end", "2016-04-30"))
 con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 
-DBI::dbExecute(con,glue("create schema if not exists {DBI::dbQuoteIdentifier(con, SCHEMA_CLEAN_DATA)}"))
+DBI::dbExecute(con,glue("create schema if not exists {q_ident(SCHEMA_CLEAN_DATA)}"))
 
 
 ######      FUNCTION LIST       ######
@@ -75,15 +75,18 @@ clean_oil <- function(con, raw_schema = SCHEMA_RAW){
     log_info("Cleaing oil table....")
 
     oil_price_records <- pg_read_table(con,raw_schema,"oil") %>% 
-        clean_names() %>%
-            filter(!is.na(dcoilwtico) ) %>%
+         janitor::clean_names() %>%
+            filter(!is.na(date) & !is.na(dcoilwtico)) %>%
                 mutate(
                     date   = as.Date(date),
-                    dcoilwtico = as.double(dcoilwtico)
-                    )%>%
-                        arrange(date) %>%
-                                        mutate(dcoilwtico = dcoilwtico - lag(dcoilwtico, default = NA))  %>%
-                    rename(oil_price = dcoilwtico ,  )
+                    oil_price = as.double(dcoilwtico)
+                )%>%
+                    arrange(date) %>%
+                      mutate(
+                        oil_change = oil_price - dplyr::lag(oil_price),
+                        oil_change = dplyr::coalesce(oil_change, 0)
+                       ) %>%
+                        select(date, oil_price, oil_change)
 
     log_info("cleaned {nrow(oil_price_records)} oil_price_records")
     oil_price_records 
@@ -168,13 +171,13 @@ clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_CLE
   log_info("Cleaning Train in SQL (Postgres)...")
 
   # Ensure schema exists
-  DBI::dbExecute(con, glue("create schema if not exists {DBI::dbQuoteIdentifier(con, clean_schema)}"))
+  DBI::dbExecute(con, glue("create schema if not exists {q_ident ( clean_schema)}"))
 
-  DBI::dbExecute(con, glue("drop table if exists {DBI::dbQuoteIdentifier(con, clean_schema)}.stage_train"))
+  DBI::dbExecute(con, glue("drop table if exists {q_ident ( clean_schema)}.stage_train"))
 
   # Build/replace cleaned table in Postgres
   DBI::dbExecute(con, glue("
-    create table {DBI::dbQuoteIdentifier(con, clean_schema)}.stage_train as
+    create table {q_ident ( clean_schema)}.stage_train as
     select
       id::int as id,
       date::date as date,
@@ -201,7 +204,7 @@ clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_CLE
            extract(day from (date_trunc('month', date::date) + interval '1 month - 1 day'))::int
       ) as is_wage_day
 
-    from {DBI::dbQuoteIdentifier(con, raw_schema)}.train
+    from {q_ident ( raw_schema)}.train
     where date is not null
       and store_nbr is not null
       and item_nbr is not null
@@ -211,7 +214,7 @@ clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_CLE
 
   n <- DBI::dbGetQuery(
     con,
-    glue("select count(*)::bigint as n from {DBI::dbQuoteIdentifier(con, clean_schema)}.stage_train")
+    glue("select count(*)::bigint as n from {q_ident ( clean_schema)}.stage_train")
   )$n[1]
 
   log_info("  Cleaned {n} train records (written to {clean_schema}.stage_train)")
@@ -267,7 +270,7 @@ cleaned_data$transactions <- clean_transactions(con)
 cleaned_data$test  <- clean_test(con)
 
 # cleaned_data$train <- clean_train(con) EXPENSIVE to Run in R, run in psql
-clean_train2(con)
+# clean_train2(con)
 
 
 

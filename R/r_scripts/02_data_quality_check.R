@@ -35,18 +35,6 @@ con <- connect_postgres()
 on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 
 ######      FUNCTION LIST       ######
-### DB_QOUTE_IDENTIFIER_FUNCTION
-q_ident <- function(x) DBI::dbQuoteIdentifier(con,x)
-
-
-
-### ROW_COUNT_FUNCTION
-get_row_count <- function(schema, table){
-    DBI::dbGetQuery(
-        con,
-        glue("select count(*)::bigint as n from {q_ident(schema)}.{q_ident(table)}")
-    )$n[1]
-}
 
 ### GET_COLUMN_METADATA_FUNCTION
 get_columns_meta <- function(schema,table){
