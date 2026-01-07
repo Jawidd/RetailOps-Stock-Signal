@@ -1,0 +1,6 @@
+timestamp,category,schema,table_name,test_name,status
+2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_holidays_events,"Unique (holiday_date,holiday_type,locale,locale_name,description)",PASS
+2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_items,Unique (item_nbr),PASS
+2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_oil,Unique (date),PASS
+2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_stores,Unique (store_nbr),PASS
+2026-01-07 12:31:11,UNIQUENESS,r_stage,stage_transactions,"Unique (date,store_nbr)",PASS
