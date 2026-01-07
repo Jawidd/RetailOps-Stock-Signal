@@ -27,26 +27,7 @@ on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
 DBI::dbExecute(con,glue("create schema if not exists {DBI::dbQuoteIdentifier(con, SCHEMA_CLEAN_DATA)}"))
 
 
-
 ######      FUNCTION LIST       ######
-### PG_read_TABLE_FUNCTION
-pg_read_table <- function(con,schema,table){
-    DBI::dbGetQuery(con,glue(
-        "select * from {DBI::dbQuoteIdentifier(con,schema)}.{DBI::dbQuoteIdentifier(con,table)}"
-        )
-    )
-}
-
-### PG_WRITE_TABLE_FUNCTION
-pg_write_table <- function(con,schema,table,df){
-    DBI::dbWriteTable(con,
-    DBI::Id(schema = schema, table = table),
-    df,overwrite = TRUE
-    )
-    invisible(TRUE)
-}
-
-
 ### CLEAN_HOLIDAY_EVENTS_FUNCTION
 clean_holiday_events <- function(con, raw_schema = SCHEMA_RAW){
     log_info("Cleaing HOLIDAY_EVENTS...")
@@ -285,7 +266,7 @@ cleaned_data$stores <- clean_stores(con)
 cleaned_data$transactions <- clean_transactions(con)
 cleaned_data$test  <- clean_test(con)
 
-# cleaned_data$train <- clean_train(con) EXPENSIVE
+# cleaned_data$train <- clean_train(con) EXPENSIVE to Run in R, run in psql
 clean_train2(con)
 
 

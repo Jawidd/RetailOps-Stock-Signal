@@ -6,7 +6,7 @@ suppressPackageStartupMessages({
   library(glue)
 })
 
-
+### connect_postgres_FUNCTION
 connect_postgres <- function ( 
     host     = Sys.getenv("PG_HOST", "postgres"),
     port     = as.integer(Sys.getenv("PG_PORT", "5432")),
@@ -34,6 +34,23 @@ connect_postgres <- function (
     return(con)
 }
 
+
+### PG_read_TABLE_FUNCTION
+pg_read_table <- function(con,schema,table){
+    DBI::dbGetQuery(con,glue(
+        "select * from {DBI::dbQuoteIdentifier(con,schema)}.{DBI::dbQuoteIdentifier(con,table)}"
+        )
+    )
+}
+
+### PG_WRITE_TABLE_FUNCTION
+pg_write_table <- function(con,schema,table,df){
+    DBI::dbWriteTable(con,
+    DBI::Id(schema = schema, table = table),
+    df,overwrite = TRUE
+    )
+    invisible(TRUE)
+}
 
 
 
