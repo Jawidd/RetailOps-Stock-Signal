@@ -101,9 +101,14 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - check pk_duplicate
     - check pk_nullabe
 
-4. [] Data cleaning 
+4. [X] Data cleaning 
     - write cleaing functions for holiday_events, items, stores,
      train, test, oil, transactions
+     - write alternate method for train_clean function as
+      doing cleaning in R is expensive, do the cleaning in postgres
+
+5. [] TEST Stage/cleaned DATA
+    - UNIQUENESS TEST
 
 
 
