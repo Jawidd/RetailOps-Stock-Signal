@@ -34,32 +34,37 @@ test_results <- tibble::tibble(
 )
 
 
+# for 1-UNIQUENESS TEST Function
 uniqueness_columns <- list(
   stage_holidays_events = c("holiday_date", "holiday_type", "locale", "locale_name", "description"),
   stage_items          = c("item_nbr"),
   stage_oil            = c("date"),
   stage_stores         = c("store_nbr"),
-#   stage_test           = c("id"),
-#   stage_train          = c("date", "store_nbr", "item_nbr"),
+  stage_train          = c("date", "store_nbr", "item_nbr"),
   stage_transactions   = c("date", "store_nbr")
 )
 
+# # for 2-test_not_null  Function
 not_null_columns <- list(
   stage_holidays_events = c("holiday_date", "holiday_type", "locale", "locale_name", "description"),
   stage_items          = c("item_nbr","family","class"),
   stage_oil            = c("date","oil_price"),
   stage_stores         = c("store_nbr","city","state"),
-#   stage_test           = c("date", "store_nbr", "item_nbr","id"),
-#   stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
+  stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
   stage_transactions   = c("date", "store_nbr", "transactions")
+)
+
+# for 3-test_referential Function
+referential_columns <- list(
+  list(child = "stage_transactions", child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
+  list(child = "stage_train",        child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
+  list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
 )
 
 
 
-
-
 ######      FUNCTION LIST       ######
-### UNIQUENESS TEST
+### 1-UNIQUENESS TEST Function
 test_uniqueness <- function(schema,table_name,cols ) {
 
     data <- pg_read_table(con, schema, table_name)
@@ -90,7 +95,7 @@ test_uniqueness <- function(schema,table_name,cols ) {
 }
 
 
-### NOT NULL TEST
+### 2-NOT NULL TEST
 test_not_null <- function(schema,table_name,cols ) {
     data <- pg_read_table(con, schema, table_name)
     # cols <- rlang::syms(cols)
@@ -119,6 +124,48 @@ test_not_null <- function(schema,table_name,cols ) {
 
 }
 
+### 3-Test_Referntial_column_function
+test_referential <- function(schema, child_table, child_col, parent_table, parent_col) {
+
+    child <- pg_read_table(con, schema, child_table) 
+    parent <- pg_read_table(con, schema, parent_table)
+
+    bad_referential <- child %>%
+    dplyr::anti_join(
+      parent %>% dplyr::select(dplyr::all_of(parent_col)) %>% dplyr::distinct(),
+      by = setNames(parent_col, child_col)
+    )
+    n_bad_referential <- nrow(bad_referential)
+
+    test_name <-   test_name <- paste0(
+    "FK (", child_table, ".", child_col,
+    " -> ", parent_table, ".", parent_col, ")"
+  )
+    status <- if (n_bad_referential == 0) "PASS" else paste0("FAIL (", n_bad_referential, " missing keys)")
+    test_results <<- dplyr::add_row(
+    test_results,
+    timestamp   = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    category    = "REFERENTIAL",
+    schema      = schema,
+    table_name  = child_table,
+    test_name   = test_name,
+    status      = status
+  )
+  out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+  readr::write_csv(test_results, file.path(out_dir, "04_test_data_quality.csv"))
+
+
+}
+
+
+
+### 4-Test_Range_Function
+
+
+
+
+
 
 ######               ######
 ######      RUN      ######
@@ -134,16 +181,27 @@ test_not_null <- function(schema,table_name,cols ) {
 
 
 
-#UNIQUENESS TESTS 
+#run UNIQUENESS TESTS 
 for(tbl in names(uniqueness_columns)) {
 test_uniqueness("r_stage", tbl, uniqueness_columns[[tbl]])
 }
 logger::log_info("UNIQUENESS TESTS COMPLETED and saved to /outputs" )
 
 
-#NOT NULL TESTS 
+# run NOT NULL TESTS 
 for(tbl in names(not_null_columns)) {
 test_not_null("r_stage", tbl, not_null_columns[[tbl]])
 }
 logger::log_info("not_null TESTS COMPLETED and saved to /outputs" )
+
+
+# run referential tests
+for (r in referential_columns) {
+  test_referential(
+    "r_stage",
+    r$child, r$child_col,
+    r$parent, r$parent_col
+  )
+}
+logger::log_info("REFERENTIAL TESTS COMPLETED and saved to /outputs")
 

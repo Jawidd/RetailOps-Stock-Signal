@@ -19,7 +19,9 @@ Later, I will add **forecasting + reorder recommendations**.
 - Artifacts:
     /dbt/snapshots/Metabase - Mart_daily_sales_Dash.pdf
 
-    
+
+### Notes
+- it can be holiday for stores from particular cities or states. a column should be added.
 ---
 
 ## Goal (why I’m building this)
@@ -107,9 +109,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
      - write alternate method for train_clean function as
       doing cleaning in R is expensive, do the cleaning in postgres
 
-5. [] TEST Stage/cleaned DATA
+5. [] TEST Stage(clean) DATA
     - UNIQUENESS TEST
     - NOt_null test
+    - Referntial
 
 
 
