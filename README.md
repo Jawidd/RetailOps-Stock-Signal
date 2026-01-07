@@ -111,11 +111,13 @@ This project will show I can build an end-to-end data workflow (and later add ML
       doing cleaning in R is expensive, do the cleaning in postgres
     - Note : - train is sampled(0.05) in R_stag_train 
 
-5. [] TEST Stage(clean) DATA
+5. [X] TEST Stage(clean) DATA
     - UNIQUENESS TESTs
     - NOt_null tests
     - Referntial tests
     - Range tests
+
+6. [X] make reports and plots
 
 
 
