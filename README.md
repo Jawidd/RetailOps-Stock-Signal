@@ -7,8 +7,21 @@ Later, I will add **forecasting + reorder recommendations**.
 ---
 
 ## Current status
-**Not started yet.**  
-This README will be updated as I complete each step.
+- dataset:  Favorita Grocery Sales Forecasting (Kaggle)
+- database: PostgreSQL 
+- Data Build Tool: dbt-core with dbt-postgres adapter
+- Pipeline Milestones:
+    - Staging Layer: Completed. Created stg_ models for raw stores, oil prices, and transactions data to standardize field names and data types.
+    Marts Layer: Completed. Developed a mart_daily_sales model that aggregates unit sales by date and store to provide a clean source for reporting.
+- Visualization:
+    Tool: Metabase (Connected to PostgreSQL).
+    Dashboard: Built a "Daily Sales Overview" dashboard featuring time-series trends and store performance.
+- Artifacts:
+    /dbt/snapshots/Metabase - Mart_daily_sales_Dash.pdf
+
+
+### Notes
+- it can be holiday for stores from particular cities or states. a column should be added.
 
 ---
 
@@ -68,21 +81,47 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] Metabase Dashboards
     - create dashboard from daily_sales analysis
-    - save dashboards and charts as pdf and png
+    - save dashboards and charts as pdf and png in /dbt/snapshots
     
 
+### Week 1 (Using R)
+
+
+## Implementation Tasks
+
+1. [X] Docker Setup
+    - Create  R environment
+    - Install necessary packages (archive, DBI, RPostgres, DataExplorer, etc.)
+    - Configure connection to existing PostgreSQL
+
+2. [X] Data availability check
+    - connect to database and check each file exists in raw schema
+    - check row count for each table and save results to outpu/
+
+3. [X] Data quality check
+    - check row number
+    - add&join columndata and pg_stat 
+    - check pk_duplicate
+    - check pk_nullabe
+
+4. [X] Data cleaning 
+    - write cleaing functions for holiday_events, items, stores,
+     train, test, oil, transactions
+    - write alternate method for train_clean function as
+      doing cleaning in R is expensive, do the cleaning in postgres
+    - Note : - train is sampled(0.05) in R_stag_train 
+
+5. [X] TEST Stage(clean) DATA
+    - UNIQUENESS TESTs
+    - NOt_null tests
+    - Referntial tests
+    - Range tests
+
+6. [X] make reports and plots
 
 
 
- - [] Dashboard
-    - Metabase: set up locally with Docker compose
-    - connect to DuckDB warehouse
-    - create a simple dashboard page with few charts (screenshots)
-    - save screenshots in the repo
 
-- [ ] Build 1 clean analytics table (daily store KPIs)
-- [ ] Create 1 simple dashboard page (screenshots)
-- [ ] Add a few basic data quality checks
 
 ### Next (after MVP)
 - [ ] Add dbt models + tests

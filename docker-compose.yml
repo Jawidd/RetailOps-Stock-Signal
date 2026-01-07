@@ -16,7 +16,27 @@ services:
       timeout: 5s
       retries: 5
 
-      
+  r:
+    container_name: retailops_r
+    build:
+      context: .
+      dockerfile: R/Dockerfile
+    working_dir: /app/R
+    volumes:
+      - ./:/app
+    tty: true
+    stdin_open: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    mem_limit: 5g
+    memswap_limit: 5g     
+    cpus: "2.0"
+    shm_size: "1g"   
+
+
+
   metabase:
     image: metabase/metabase:latest
     container_name: retailops_metabase
@@ -42,6 +62,8 @@ services:
     stdin_open: true
     ports:
       - "8080:8080"
+
+
 
 
 

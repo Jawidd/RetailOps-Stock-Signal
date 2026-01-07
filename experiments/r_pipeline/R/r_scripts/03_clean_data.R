@@ -1,0 +1,285 @@
+# scripts/03_clean_data
+
+source("../utils/db.R")
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(data.table)
+  library(lubridate)
+  library(janitor)
+  library(logger)
+  library(glue)
+
+})
+
+
+log_info("{line}", line = paste(rep("=", 60), collapse = ""))
+log_info("03_clean_data")
+
+SCHEMA_RAW <- Sys.getenv("PG_SCHEMA", "raw")
+SCHEMA_STAGE <- Sys.getenv("PG_SCHEMA", "r_stage")
+earthquake_start <- as.Date(Sys.getenv("earthquake_start", "2016-04-16"))
+earthquake_end <- as.Date(Sys.getenv("earthquake_end", "2016-04-30"))
+
+con <- connect_postgres()
+on.exit( try( DBI::dbDisconnect(con),silent=TRUE), add=TRUE)
+
+DBI::dbExecute(con,glue("create schema if not exists {q_ident(SCHEMA_STAGE)}"))
+
+
+######      FUNCTION LIST       ######
+### CLEAN_HOLIDAY_EVENTS_FUNCTION
+clean_holiday_events <- function(con, raw_schema = SCHEMA_RAW){
+    log_info("Cleaing HOLIDAY_EVENTS...")
+
+    holidays_events <- pg_read_table(con,raw_schema,"holidays_events") %>% 
+        clean_names() %>%
+            filter(!is.na(date)) %>%
+                mutate(
+                    date   = as.Date(date),
+                    type   = type,
+                    locale      = locale,
+                    locale_name = locale_name,
+                    holiday_description = description,
+                    holiday_transferred = coalesce(as.logical(transferred == "True"), FALSE),
+                    is_actual_holiday   = (
+                        type %in% c("Holiday", "Additional", "Bridge") & transferred == "False"
+                        )
+                    ) %>%
+                        rename(holiday_date = date , holiday_type = type)
+
+    log_info("cleaned {nrow(holidays_events)} holidays_events")
+    holidays_events 
+}
+
+### CLEAN_ITEMs_FUNCTION
+clean_items <- function(con, raw_schema = SCHEMA_RAW){
+    log_info("Cleaing items....")
+
+    items <- pg_read_table(con,raw_schema,"items") %>% 
+        clean_names() %>%
+            filter(!is.na(item_nbr)) %>%
+                mutate(
+                    item_nbr = as.integer(item_nbr),
+                    family= family,
+                    class= as.integer(class),
+                    perishable = as.logical(as.integer(perishable))
+                    )
+    log_info("cleaned {nrow(items)} items")
+    items 
+}
+
+
+### CLEAN_OIL_FUNCTION
+clean_oil <- function(con, raw_schema = SCHEMA_RAW){
+    log_info("Cleaing oil table....")
+
+    oil_price_records <- pg_read_table(con,raw_schema,"oil") %>% 
+         janitor::clean_names() %>%
+            filter(!is.na(date) & !is.na(dcoilwtico)) %>%
+                mutate(
+                    date   = as.Date(date),
+                    oil_price = as.double(dcoilwtico)
+                )%>%
+                    arrange(date) %>%
+                      mutate(
+                        oil_change = oil_price - dplyr::lag(oil_price),
+                        oil_change = dplyr::coalesce(oil_change, 0)
+                       ) %>%
+                        select(date, oil_price, oil_change)
+
+    log_info("cleaned {nrow(oil_price_records)} oil_price_records")
+    oil_price_records 
+}
+
+
+### CLEAN_STORES_FUNCTION
+clean_stores <- function(con, raw_schema = SCHEMA_RAW){
+    log_info("Cleaing stores....")
+
+    stores <- pg_read_table(con,raw_schema,"stores") %>% 
+        clean_names() %>%
+            filter(!is.na(store_nbr)) %>%
+                mutate(
+                    store_nbr = as.integer(store_nbr),
+                    city = city,
+                    state = state,
+                    type = as.character(type),
+                    cluster = as.integer(cluster)
+                    )%>%
+                        rename(store_type = type )
+
+
+    log_info("cleaned {nrow(stores)} stores")
+    stores 
+}
+
+
+
+
+### CLEAN_Transaction_FUNCTION
+clean_transactions <- function(con, raw_schema = SCHEMA_RAW) {
+  log_info("Cleaning transactions...")
+
+  transactions <- pg_read_table(con, raw_schema, "transactions") %>%
+    clean_names() %>%
+    filter(!is.na(date) & !is.na(store_nbr) & !is.na(transactions)) %>%
+    mutate(
+      date         = as.Date(date),
+      store_nbr    = as.integer(store_nbr),
+      transactions = as.integer(transactions)
+    )
+
+  log_info("  Cleaned {nrow(transactions)} transaction records")
+  transactions
+}
+
+
+set.seed(42)
+### CLEAN_Train_FUNCTION (EXPENSIVE)
+clean_train <- function(con, raw_schema = SCHEMA_RAW) {
+  log_info("Cleaning Train ")
+  train <- dbGetQuery(con, "select * from raw.train tablesample bernoulli (5)") %>%
+  # train <- pg_read_table(con, raw_schema, "train") %>%
+    clean_names() %>%
+    filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr) & !is.na(unit_sales)) %>%
+    mutate(
+      id        = as.integer(id),
+      date      = as.Date(date),
+      store_nbr = as.integer(store_nbr),
+      item_nbr  = as.integer(item_nbr),
+      unit_sales = as.numeric(unit_sales),
+      onpromotion = coalesce(as.logical(onpromotion == "True"), FALSE),
+
+      is_return  = unit_sales < 0,
+      year       = year(date),
+      month      = month(date),
+      day        = day(date),
+      day_of_week = wday(date)  -1 ,  # 0=sun, 6=sat
+      is_earthquake_period = date >= earthquake_start &
+        date <= earthquake_end,
+      is_wage_day = (day == 15 | day == days_in_month(date))
+    )
+    
+
+  log_info("  Cleaned {nrow(train)} train records")
+  train
+}
+
+### CLEAN_Train_FUNCTION2 (USING PSQL to process)
+clean_train2 <- function(con, raw_schema = SCHEMA_RAW, clean_schema = SCHEMA_STAGE) {
+  log_info("Cleaning Train in SQL (Postgres)...")
+
+  # Ensure schema exists
+  DBI::dbExecute(con, glue("create schema if not exists {q_ident ( clean_schema)}"))
+
+  DBI::dbExecute(con, glue("drop table if exists {q_ident ( clean_schema)}.stage_train"))
+
+  # Build/replace cleaned table in Postgres
+  DBI::dbExecute(con, glue("
+    create table {q_ident ( clean_schema)}.stage_train as
+    select
+      id::int as id,
+      date::date as date,
+      store_nbr::int as store_nbr,
+      item_nbr::int as item_nbr,
+      unit_sales::double precision as unit_sales,
+
+      coalesce(onpromotion::text = 'True', false) as onpromotion,
+
+      (unit_sales::double precision < 0) as is_return,
+
+      extract(year  from date::date)::int as year,
+      extract(month from date::date)::int as month,
+      extract(day   from date::date)::int as day,
+
+      -- Postgres: 0=Sunday .. 6=Sat 
+      extract(dow from date::date)::int as day_of_week,
+
+      (date::date between '{as.character(as.Date(earthquake_start))}' and '{as.character(as.Date(earthquake_end))}') as is_earthquake_period,
+
+      (
+        extract(day from date::date)::int = 15
+        or extract(day from date::date)::int =
+           extract(day from (date_trunc('month', date::date) + interval '1 month - 1 day'))::int
+      ) as is_wage_day
+
+    from {q_ident ( raw_schema)}.train
+    where date is not null
+      and store_nbr is not null
+      and item_nbr is not null
+      and unit_sales is not null
+  "))
+
+
+  n <- DBI::dbGetQuery(
+    con,
+    glue("select count(*)::bigint as n from {q_ident ( clean_schema)}.stage_train")
+  )$n[1]
+
+  log_info("  Cleaned {n} train records (written to {clean_schema}.stage_train)")
+  invisible(n)
+}
+
+
+
+### CLEAN_TestFUNCTION
+clean_test <- function(con, raw_schema = SCHEMA_RAW) {
+  log_info("Cleaning test ")
+
+  test <- pg_read_table(con, raw_schema, "test") %>%
+    clean_names() %>%
+    filter(!is.na(date) & !is.na(store_nbr) & !is.na(item_nbr)) %>%
+    mutate(
+      id        = as.integer(id),
+      date      = as.Date(date),
+      store_nbr = as.integer(store_nbr),
+      item_nbr  = as.integer(item_nbr),
+     
+      onpromotion = coalesce(as.logical(onpromotion == "True"), FALSE),
+
+   
+      year       = year(date),
+      month      = month(date),
+      day        = day(date),
+      day_of_week = wday(date) -1 ,  # 0=Sunday, 6=sat
+      is_earthquake_period = date >= earthquake_start &
+        date <= earthquake_end,
+      is_wage_day = (day == 15 | day == days_in_month(date))
+    )
+    
+
+  log_info("  Cleaned {nrow(test)} test records")
+  test
+}
+
+
+
+
+
+######               ######
+######      RUN      ######
+
+cleaned_data <- list()
+
+cleaned_data$holidays_events <- clean_holiday_events(con)
+cleaned_data$items <- clean_items(con)
+cleaned_data$oil <- clean_oil(con)
+cleaned_data$stores <- clean_stores(con)
+cleaned_data$transactions <- clean_transactions(con)
+# cleaned_data$test  <- clean_test(con)
+cleaned_data$train <- clean_train(con) 
+# clean_train2(con)
+
+
+
+
+log_info("Writing cleaned tables to Postgres schema {SCHEMA_STAGE}...")
+
+for(name in names(cleaned_data)){
+
+    out_table <- paste0("stage_", name)
+    pg_write_table(con,SCHEMA_STAGE,out_table,cleaned_data[[name]])
+    log_info("wrote {SCHEMA_STAGE}.{out_table} ({nrow(cleaned_data[[name]])} rows)")
+}
+
