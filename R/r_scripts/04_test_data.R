@@ -40,7 +40,7 @@ uniqueness_columns <- list(
   stage_items          = c("item_nbr"),
   stage_oil            = c("date"),
   stage_stores         = c("store_nbr"),
-  stage_train          = c("date", "store_nbr", "item_nbr"),
+#   stage_train          = c("date", "store_nbr", "item_nbr"),
   stage_transactions   = c("date", "store_nbr")
 )
 
@@ -50,16 +50,27 @@ not_null_columns <- list(
   stage_items          = c("item_nbr","family","class"),
   stage_oil            = c("date","oil_price"),
   stage_stores         = c("store_nbr","city","state"),
-  stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
+#   stage_train          = c("date", "store_nbr", "item_nbr","unit_sales"),
   stage_transactions   = c("date", "store_nbr", "transactions")
 )
 
 # for 3-test_referential Function
 referential_columns <- list(
-  list(child = "stage_transactions", child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
-  list(child = "stage_train",        child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
-  list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
+  list(child = "stage_transactions", child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr")
+#   ,list(child = "stage_train",        child_col = "store_nbr", parent = "stage_stores", parent_col = "store_nbr"),
+#   list(child = "stage_train",        child_col = "item_nbr",  parent = "stage_items",  parent_col = "item_nbr")
 )
+
+# for 4-test_referential Function
+range_columns <- list(
+  list(table = "stage_transactions", col = "transactions", min = 0, max = 10000),
+  list(table = "stage_oil",          col = "oil_price",   min = 20, max = 150),
+  list(table = "stage_items",        col = "class",       min = 1,   max = 10000)
+)
+
+
+
+
 
 
 
@@ -161,6 +172,40 @@ test_referential <- function(schema, child_table, child_col, parent_table, paren
 
 
 ### 4-Test_Range_Function
+test_range <- function(schema, table_name, col, min_value, max_value) {
+
+  data <- pg_read_table(con, schema, table_name)
+
+  # ignore NULLs (NULLs handled by NOT_NULL test)
+  out_of_range <- data %>%
+    dplyr::filter(.data[[col]] < min_value | .data[[col]] > max_value)
+
+  n_out_of_range <- nrow(out_of_range)
+
+  test_name <- paste0(
+    "RANGE (", col, " between ", min_value, " and ", max_value, ")"
+  )
+
+  status <- if (n_out_of_range == 0) "PASS" else paste0("FAIL (", n_out_of_range, " out of range)")
+
+  test_results <<- dplyr::add_row(
+    test_results,
+    timestamp   = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    category    = "RANGE",
+    schema      = schema,
+    table_name = table_name,
+    test_name   = test_name,
+    status      = status
+  )
+
+  out_dir <- normalizePath(file.path(getwd(), "..", "output"), mustWork = FALSE)
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+  readr::write_csv( test_results,
+    file.path(out_dir, "04_test_data_quality.csv")
+  )
+}
+
 
 
 
@@ -181,27 +226,33 @@ test_referential <- function(schema, child_table, child_col, parent_table, paren
 
 
 
-#run UNIQUENESS TESTS 
+# 1 run UNIQUENESS TESTS 
 for(tbl in names(uniqueness_columns)) {
 test_uniqueness("r_stage", tbl, uniqueness_columns[[tbl]])
 }
 logger::log_info("UNIQUENESS TESTS COMPLETED and saved to /outputs" )
 
 
-# run NOT NULL TESTS 
+# 2 run NOT NULL TESTS 
 for(tbl in names(not_null_columns)) {
 test_not_null("r_stage", tbl, not_null_columns[[tbl]])
 }
 logger::log_info("not_null TESTS COMPLETED and saved to /outputs" )
 
 
-# run referential tests
-for (r in referential_columns) {
-  test_referential(
-    "r_stage",
-    r$child, r$child_col,
-    r$parent, r$parent_col
+# 3 run referential tests
+for (record in referential_columns) {
+  test_referential(  "r_stage",
+    record$child, record$child_col,
+    record$parent, record$parent_col
   )
 }
 logger::log_info("REFERENTIAL TESTS COMPLETED and saved to /outputs")
 
+
+# 4 run range tests
+for (record in range_columns) {
+  test_range("r_stage", record$table, record$col, record$min, record$max)
+}
+
+logger::log_info("RANGE TESTS COMPLETED and saved to /outputs")

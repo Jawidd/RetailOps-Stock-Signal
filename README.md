@@ -110,9 +110,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
       doing cleaning in R is expensive, do the cleaning in postgres
 
 5. [] TEST Stage(clean) DATA
-    - UNIQUENESS TEST
-    - NOt_null test
-    - Referntial
+    - UNIQUENESS TESTs
+    - NOt_null tests
+    - Referntial tests
+    - Range tests
 
 
 
