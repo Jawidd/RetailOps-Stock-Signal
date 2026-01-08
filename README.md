@@ -35,8 +35,13 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 ---
 
-## Planned milestones
-### Week 1 (MVP)
+## Planned milestones / TODO List
+
+### Week 2
+    [] Create S3 data lake with encryption, versioning and public access block
+
+
+### Week 1 
 - [X] Create a repo structure
 
 - [X] Setup dataset

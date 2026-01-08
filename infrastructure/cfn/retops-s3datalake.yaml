@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >- 
+    Reatailops - S3 data lake with encryption, versioning and public access block
+    Bucket structure should be:
+    raw/table-name/                             :should not be modified after write
+    staged/table-name/                         :cleaned data
+    curated/ (dimenstions/facts/aggregates) /   :Business ready models
+    ml/ (features/ models) /                    :feature engineering
+    metadata/ (logs/quality) /                  :operational data
+
+
+
+
+Parameters:
+  BucketNameInput:
+    Type: String
+    Default: ""
+    Description: >-
+      Optional. If empty, bucket name will be auto-generated as
+      retailops-data-lake-${Region}, Must be globally unique.
+  LifecycleEnabled:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+    Description: Enable lifecycle transitions for raw/ and staged/ prefixes
+
+Conditions:
+  EnableLifeCycle: !Equals [!Ref LifecycleEnabled, "true"]
+  UseProvidedBucketName: !Not [!Equals [!Ref BucketNameInput, ""]]
+
+
+Resources:
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !If 
+      - UseProvidedBucketName
+      - !Ref BucketNameInput
+      - !Sub "retailops-data-lake-${AWS::Region}"
+
+      VersioningConfiguration:
+          Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+      LifecycleConfiguration: !If
+        - EnableLifeCycle
+        - Rules:
+          - Id: "TransitionRawToIA"
+            Status: Enabled
+            Prefix: raw/
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+          - Id: "TansitionStagedToIA"
+            Status: Enabled
+            Prefix: staged/
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+        - !Ref "AWS::NoValue"
+      
+      Tags: 
+       - Key: Project
+         Value: RetailOps
+       - Key: ManagedBy
+         Value: cloudformation
+
+        
+
+Outputs: 
+  DataLakeBucketName: 
+    Description: RetailOps data lake bucket name
+    Value: !Ref DataLakeBucket
+  DataLakeBucketARN: 
+    Description: RetailOps data lake bucket ARN
+    Value: !GetAtt DataLakeBucket.Arn
+  DataBucketURI:
+    Description:  RetailOps data lake bucket URI
+    Value:   !Sub "s3://${DataLakeBucket}"
+      
