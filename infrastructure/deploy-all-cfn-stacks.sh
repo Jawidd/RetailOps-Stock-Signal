@@ -10,11 +10,12 @@ TEMPLATE_DIR="./cfn"
 
 echo "Deploying CloudFormation stacks..."
 echo "Region: $REGION"
-echo
+
 
 # LIST OF STACKS TO  DEPLOY/UPDATE
 STACK_FILES=(
-  "retops-s3datalake.yaml"
+  "retops-s3datalake.yaml" 
+  "retops-iam.yaml"
 
 )
 
@@ -33,6 +34,6 @@ for file in "${STACK_FILES[@]}"; do
     --no-fail-on-empty-changeset
 
   echo "Stack $stack_name was deployed"
-  echo
+
 done
 echo "  All  stacks deployed successfully "

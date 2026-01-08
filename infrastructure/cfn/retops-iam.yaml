@@ -4,62 +4,76 @@ Description: >-
     Reatailops - IAM role for pipelines/Athena/Glue/S3
     Prnicipals who can Assume this role: Ouadmin
     Data lake bucket permissions
-
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: "retailops"
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
 
 
 Resources:
   RetailOpsPipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: "retailops-${Env}-data-engineer-role"
-      Path: "/retailops/${Env}/"
+      RoleName:  !Sub  "${ProjectNameInput}-${Env}-pipeline-role"
+      Path: !Sub  "/retailops/${Env}/"
       Description:  least priviliage IAM role for Athena/Glue/S3
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
         - Sid: AllowOuadminAssumeRole
+          Effect: Allow
           Action:
             - 'sts:AssumeRole'
-          Effect: "Allow"
-          Principal:
-            AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-          Condition:
-            StringEquals:
-              aws:PrincipalArn: !Sub "arn:aws:iam::${AWS::AccountId}:user/ouadmin"
+          Principal: 
+            AWS: !Sub "arn:aws:iam::${AWS::AccountId}:user/ouadmin"
+
 
       Tags: 
        - Key: Project
-         Value: RetailOps
+         Value: !Ref ProjectNameInput
        - Key: ManagedBy
          Value: cloudformation 
           
-  # RetailOpsPipelinePolicy:
-  #   Type: AWS::IAM::Policy
-  #   Properties:
-  #     Groups: 
-  #       - String
-  #     PolicyDocument: 
-  #     PolicyName: String
-  #     Roles: 
-  #       - String
-  #     Users: 
-  #       - String
+  RetailOpsPipelinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub  "${ProjectNameInput}-${Env}-pipeline-policy"
+      Roles: 
+        - !Ref RetailOpsPipelineRole
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
 
+          #  S3: Data Lake bucket access
+          - Sid: S3DataLakeBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:  !ImportValue retailops-DataLakeBucketARN
 
+          #  S3: Data Lake Data RW
+          - Sid: S3DataLakeDataRW
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+            Resource: 
+              - !Sub
+                - "${BucketArn}/*"
+                - BucketArn: !ImportValue retailops-DataLakeBucketARN
 
-
-    
-
-
-
-
-
-
-
-
-
+          #  policy statement for S3: Athena results bucket access once s3 backet fir results created
+          #  policy statement for  Athena: query execution 
+          #  policy statement for  Glue: Data Catalog 
 
 Outputs:
-  RetailOpsPipelineRoleName:
-    Description: "RetailOpsPipelineRole Name"
-    Value: !Ref RetailOpsPipelineRole
+  RetailOpsPipelineRoleARN:
+    Description: "RetailOpsPipelineRole Arn"
+    Value: !GetAtt RetailOpsPipelineRole.Arn
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-PipelineRoleArn"
