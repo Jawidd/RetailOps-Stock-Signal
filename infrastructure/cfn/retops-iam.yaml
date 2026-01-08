@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >- 
+    Reatailops - IAM role for pipelines/Athena/Glue/S3
+    Prnicipals who can Assume this role: Ouadmin
+    Data lake bucket permissions
+
+
+
+Resources:
+  RetailOpsPipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "retailops-${Env}-data-engineer-role"
+      Path: "/retailops/${Env}/"
+      Description:  least priviliage IAM role for Athena/Glue/S3
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Sid: AllowOuadminAssumeRole
+          Action:
+            - 'sts:AssumeRole'
+          Effect: "Allow"
+          Principal:
+            AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+          Condition:
+            StringEquals:
+              aws:PrincipalArn: !Sub "arn:aws:iam::${AWS::AccountId}:user/ouadmin"
+
+      Tags: 
+       - Key: Project
+         Value: RetailOps
+       - Key: ManagedBy
+         Value: cloudformation 
+          
+  # RetailOpsPipelinePolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     Groups: 
+  #       - String
+  #     PolicyDocument: 
+  #     PolicyName: String
+  #     Roles: 
+  #       - String
+  #     Users: 
+  #       - String
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+Outputs:
+  RetailOpsPipelineRoleName:
+    Description: "RetailOpsPipelineRole Name"
+    Value: !Ref RetailOpsPipelineRole

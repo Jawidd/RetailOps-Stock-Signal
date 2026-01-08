@@ -18,12 +18,16 @@ Parameters:
     Default: ""
     Description: >-
       Optional. If empty, bucket name will be auto-generated as
-      retailops-data-lake-${Region}, Must be globally unique.
+      retailops-data-lake-${Region},
+      Must be globally unique.
   LifecycleEnabled:
     Type: String
     AllowedValues: ["true", "false"]
     Default: "true"
     Description: Enable lifecycle transitions for raw/ and staged/ prefixes
+  ProjectNameInput:
+    Type: String
+    Default: "retailops"
 
 Conditions:
   EnableLifeCycle: !Equals [!Ref LifecycleEnabled, "true"]
@@ -37,7 +41,7 @@ Resources:
       BucketName: !If 
       - UseProvidedBucketName
       - !Ref BucketNameInput
-      - !Sub "retailops-data-lake-${AWS::Region}"
+      - !Sub "${ProjectNameInput}-data-lake-${AWS::Region}"
 
       VersioningConfiguration:
           Status: Enabled
@@ -70,7 +74,7 @@ Resources:
       
       Tags: 
        - Key: Project
-         Value: RetailOps
+         Value: !Ref ProjectNameInput
        - Key: ManagedBy
          Value: cloudformation
 
@@ -80,9 +84,13 @@ Outputs:
   DataLakeBucketName: 
     Description: RetailOps data lake bucket name
     Value: !Ref DataLakeBucket
+    Export:
+      Name: retailops-DataLakeBucketName
   DataLakeBucketARN: 
     Description: RetailOps data lake bucket ARN
     Value: !GetAtt DataLakeBucket.Arn
+    Export:
+      Name: retailops-DataLakeBucketARN 
   DataBucketURI:
     Description:  RetailOps data lake bucket URI
     Value:   !Sub "s3://${DataLakeBucket}"
