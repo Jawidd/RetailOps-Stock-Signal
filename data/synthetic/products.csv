@@ -1,0 +1,201 @@
+product_id,product_name,category,subcategory,unit_cost,unit_price,supplier_id,is_active
+P0001,Electronics - Laptops #1,Electronics,Laptops,330.91,491.47,SUP001,True
+P0002,Electronics - Tablets #2,Electronics,Tablets,498.99,622.14,SUP008,True
+P0003,Electronics - Phones #3,Electronics,Phones,93.56,136.58,SUP005,True
+P0004,Electronics - Laptops #4,Electronics,Laptops,581.05,700.85,SUP022,True
+P0005,Electronics - Laptops #5,Electronics,Laptops,674.33,852.15,SUP019,True
+P0006,Electronics - Accessories #6,Electronics,Accessories,187.55,242.18,SUP002,True
+P0007,Electronics - Laptops #7,Electronics,Laptops,373.96,481.42,SUP003,True
+P0008,Electronics - Phones #8,Electronics,Phones,154.62,199.1,SUP008,True
+P0009,Electronics - Laptops #9,Electronics,Laptops,392.05,562.81,SUP018,True
+P0010,Electronics - Phones #10,Electronics,Phones,435.68,600.25,SUP023,False
+P0011,Electronics - Accessories #11,Electronics,Accessories,505.66,632.66,SUP008,True
+P0012,Electronics - Accessories #12,Electronics,Accessories,761.66,1134.64,SUP019,True
+P0013,Electronics - Tablets #13,Electronics,Tablets,278.46,342.31,SUP026,True
+P0014,Electronics - Laptops #14,Electronics,Laptops,380.11,470.05,SUP025,True
+P0015,Electronics - Phones #15,Electronics,Phones,75.79,111.62,SUP023,True
+P0016,Electronics - Accessories #16,Electronics,Accessories,546.89,707.41,SUP011,True
+P0017,Electronics - Tablets #17,Electronics,Tablets,460.03,577.55,SUP005,True
+P0018,Electronics - Phones #18,Electronics,Phones,631.35,935.57,SUP025,True
+P0019,Electronics - Tablets #19,Electronics,Tablets,498.42,735.95,SUP004,True
+P0020,Electronics - Laptops #20,Electronics,Laptops,196.99,239.06,SUP013,True
+P0021,Electronics - Laptops #21,Electronics,Laptops,341.51,437.61,SUP012,True
+P0022,Electronics - Tablets #22,Electronics,Tablets,317.56,407.84,SUP020,True
+P0023,Electronics - Tablets #23,Electronics,Tablets,155.69,224.3,SUP026,True
+P0024,Electronics - Laptops #24,Electronics,Laptops,790.17,1131.27,SUP024,True
+P0025,Electronics - Accessories #25,Electronics,Accessories,54.14,78.21,SUP018,True
+P0026,Electronics - Laptops #26,Electronics,Laptops,596.76,854.19,SUP030,True
+P0027,Electronics - Accessories #27,Electronics,Accessories,318.85,393.7,SUP003,True
+P0028,Electronics - Tablets #28,Electronics,Tablets,517.47,672.33,SUP027,True
+P0029,Electronics - Tablets #29,Electronics,Tablets,283.24,367.52,SUP019,True
+P0030,Electronics - Phones #30,Electronics,Phones,528.17,774.38,SUP023,True
+P0031,Electronics - Laptops #31,Electronics,Laptops,139.7,197.53,SUP002,True
+P0032,Electronics - Phones #32,Electronics,Phones,470.96,674.08,SUP025,True
+P0033,Electronics - Tablets #33,Electronics,Tablets,442.05,587.16,SUP003,False
+P0034,Electronics - Phones #34,Electronics,Phones,130.92,158.34,SUP028,True
+P0035,Electronics - Laptops #35,Electronics,Laptops,285.77,386.52,SUP013,True
+P0036,Electronics - Tablets #36,Electronics,Tablets,236.97,313.54,SUP015,True
+P0037,Electronics - Tablets #37,Electronics,Tablets,221.6,271.04,SUP006,True
+P0038,Electronics - Tablets #38,Electronics,Tablets,170.92,252.78,SUP012,True
+P0039,Electronics - Phones #39,Electronics,Phones,525.05,767.33,SUP022,True
+P0040,Electronics - Tablets #40,Electronics,Tablets,189.93,278.77,SUP023,True
+P0041,Electronics - Laptops #41,Electronics,Laptops,655.58,962.93,SUP020,True
+P0042,Electronics - Phones #42,Electronics,Phones,132.54,168.11,SUP018,True
+P0043,Electronics - Phones #43,Electronics,Phones,663.51,967.54,SUP006,False
+P0044,Electronics - Accessories #44,Electronics,Accessories,433.06,573.9,SUP013,True
+P0045,Electronics - Tablets #45,Electronics,Tablets,139.9,182.05,SUP030,True
+P0046,Electronics - Phones #46,Electronics,Phones,292.4,396.39,SUP022,True
+P0047,Electronics - Tablets #47,Electronics,Tablets,322.72,481.35,SUP027,True
+P0048,Electronics - Laptops #48,Electronics,Laptops,238.84,322.24,SUP008,True
+P0049,Electronics - Laptops #49,Electronics,Laptops,263.63,319.27,SUP026,True
+P0050,Electronics - Tablets #50,Electronics,Tablets,427.01,519.01,SUP013,True
+P0051,Apparel - Shoes #51,Apparel,Shoes,109.91,216.27,SUP003,True
+P0052,Apparel - Pants #52,Apparel,Pants,63.84,158.96,SUP030,True
+P0053,Apparel - Shoes #53,Apparel,Shoes,83.93,195.82,SUP007,True
+P0054,Apparel - Accessories #54,Apparel,Accessories,90.1,185.38,SUP013,True
+P0055,Apparel - Accessories #55,Apparel,Accessories,79.69,173.33,SUP005,True
+P0056,Apparel - Shoes #56,Apparel,Shoes,101.88,206.26,SUP005,True
+P0057,Apparel - Pants #57,Apparel,Pants,14.49,32.08,SUP024,True
+P0058,Apparel - Shoes #58,Apparel,Shoes,11.82,25.51,SUP024,True
+P0059,Apparel - Accessories #59,Apparel,Accessories,80.97,155.63,SUP029,True
+P0060,Apparel - Accessories #60,Apparel,Accessories,52.54,129.02,SUP012,True
+P0061,Apparel - Pants #61,Apparel,Pants,47.52,89.31,SUP005,True
+P0062,Apparel - Accessories #62,Apparel,Accessories,106.51,210.95,SUP003,True
+P0063,Apparel - Shirts #63,Apparel,Shirts,99.89,218.62,SUP028,True
+P0064,Apparel - Shirts #64,Apparel,Shirts,36.6,68.27,SUP005,True
+P0065,Apparel - Pants #65,Apparel,Pants,109.05,244.62,SUP026,True
+P0066,Apparel - Accessories #66,Apparel,Accessories,48.41,111.74,SUP020,True
+P0067,Apparel - Shirts #67,Apparel,Shirts,107.58,252.37,SUP013,True
+P0068,Apparel - Accessories #68,Apparel,Accessories,19.26,36.85,SUP020,True
+P0069,Apparel - Accessories #69,Apparel,Accessories,76.71,138.57,SUP017,True
+P0070,Apparel - Shoes #70,Apparel,Shoes,82.99,149.68,SUP018,True
+P0071,Apparel - Shirts #71,Apparel,Shirts,70.36,160.73,SUP022,True
+P0072,Apparel - Shirts #72,Apparel,Shirts,34.67,79.69,SUP022,True
+P0073,Apparel - Shoes #73,Apparel,Shoes,45.79,106.35,SUP025,True
+P0074,Apparel - Shoes #74,Apparel,Shoes,103.41,233.74,SUP004,True
+P0075,Apparel - Shoes #75,Apparel,Shoes,20.3,41.77,SUP014,True
+P0076,Apparel - Pants #76,Apparel,Pants,36.84,91.4,SUP015,True
+P0077,Apparel - Shirts #77,Apparel,Shirts,108.13,242.41,SUP024,True
+P0078,Apparel - Shoes #78,Apparel,Shoes,65.29,143.89,SUP017,True
+P0079,Apparel - Pants #79,Apparel,Pants,31.48,72.58,SUP017,True
+P0080,Apparel - Shirts #80,Apparel,Shirts,12.67,28.53,SUP028,True
+P0081,Apparel - Shoes #81,Apparel,Shoes,113.45,279.97,SUP027,True
+P0082,Apparel - Pants #82,Apparel,Pants,50.72,91.84,SUP005,True
+P0083,Apparel - Shoes #83,Apparel,Shoes,57.1,141.42,SUP025,True
+P0084,Apparel - Pants #84,Apparel,Pants,103.83,208.29,SUP018,True
+P0085,Apparel - Shirts #85,Apparel,Shirts,103.63,209.52,SUP020,True
+P0086,Apparel - Shoes #86,Apparel,Shoes,71.25,174.94,SUP016,True
+P0087,Apparel - Shirts #87,Apparel,Shirts,72.71,135.82,SUP004,True
+P0088,Apparel - Shoes #88,Apparel,Shoes,118.91,225.7,SUP029,True
+P0089,Apparel - Shoes #89,Apparel,Shoes,106.51,246.95,SUP008,True
+P0090,Apparel - Shirts #90,Apparel,Shirts,87.27,179.05,SUP008,True
+P0091,Apparel - Shirts #91,Apparel,Shirts,99.03,234.41,SUP003,True
+P0092,Apparel - Accessories #92,Apparel,Accessories,110.46,238.37,SUP027,True
+P0093,Apparel - Shirts #93,Apparel,Shirts,97.81,220.56,SUP025,True
+P0094,Apparel - Pants #94,Apparel,Pants,97.54,236.34,SUP005,True
+P0095,Apparel - Accessories #95,Apparel,Accessories,51.31,95.73,SUP018,True
+P0096,Apparel - Pants #96,Apparel,Pants,13.95,29.66,SUP009,True
+P0097,Apparel - Accessories #97,Apparel,Accessories,41.52,91.91,SUP007,False
+P0098,Apparel - Pants #98,Apparel,Pants,14.11,33.52,SUP023,True
+P0099,Apparel - Shoes #99,Apparel,Shoes,23.98,51.93,SUP013,True
+P0100,Apparel - Shoes #100,Apparel,Shoes,33.74,75.44,SUP015,True
+P0101,Home Goods - Bedding #101,Home Goods,Bedding,29.73,55.65,SUP004,True
+P0102,Home Goods - Kitchenware #102,Home Goods,Kitchenware,196.67,394.97,SUP008,True
+P0103,Home Goods - Furniture #103,Home Goods,Furniture,162.15,279.88,SUP011,True
+P0104,Home Goods - Furniture #104,Home Goods,Furniture,92.19,166.61,SUP019,True
+P0105,Home Goods - Kitchenware #105,Home Goods,Kitchenware,22.22,48.3,SUP019,True
+P0106,Home Goods - Kitchenware #106,Home Goods,Kitchenware,213.35,381.1,SUP001,True
+P0107,Home Goods - Furniture #107,Home Goods,Furniture,59.58,99.81,SUP023,True
+P0108,Home Goods - Furniture #108,Home Goods,Furniture,218.66,429.04,SUP008,True
+P0109,Home Goods - Furniture #109,Home Goods,Furniture,287.14,579.03,SUP029,True
+P0110,Home Goods - Furniture #110,Home Goods,Furniture,189.34,339.62,SUP028,True
+P0111,Home Goods - Decor #111,Home Goods,Decor,116.45,236.45,SUP003,False
+P0112,Home Goods - Kitchenware #112,Home Goods,Kitchenware,48.08,73.67,SUP009,False
+P0113,Home Goods - Bedding #113,Home Goods,Bedding,258.81,515.69,SUP007,True
+P0114,Home Goods - Kitchenware #114,Home Goods,Kitchenware,42.88,79.08,SUP024,True
+P0115,Home Goods - Bedding #115,Home Goods,Bedding,64.36,116.09,SUP008,True
+P0116,Home Goods - Bedding #116,Home Goods,Bedding,190.52,370.48,SUP026,False
+P0117,Home Goods - Bedding #117,Home Goods,Bedding,121.76,235.98,SUP007,True
+P0118,Home Goods - Furniture #118,Home Goods,Furniture,259.1,508.12,SUP004,True
+P0119,Home Goods - Bedding #119,Home Goods,Bedding,35.11,68.45,SUP012,False
+P0120,Home Goods - Bedding #120,Home Goods,Bedding,181.95,392.68,SUP014,True
+P0121,Home Goods - Bedding #121,Home Goods,Bedding,125.63,245.02,SUP028,True
+P0122,Home Goods - Furniture #122,Home Goods,Furniture,170.5,368.11,SUP022,True
+P0123,Home Goods - Furniture #123,Home Goods,Furniture,288.94,616.52,SUP002,True
+P0124,Home Goods - Bedding #124,Home Goods,Bedding,34.77,54.61,SUP024,False
+P0125,Home Goods - Decor #125,Home Goods,Decor,41.92,82.92,SUP026,True
+P0126,Home Goods - Furniture #126,Home Goods,Furniture,105.91,221.5,SUP008,False
+P0127,Home Goods - Kitchenware #127,Home Goods,Kitchenware,247.12,419.44,SUP007,True
+P0128,Home Goods - Bedding #128,Home Goods,Bedding,213.57,414.38,SUP005,True
+P0129,Home Goods - Bedding #129,Home Goods,Bedding,224.5,463.02,SUP006,True
+P0130,Home Goods - Decor #130,Home Goods,Decor,65.57,132.81,SUP015,True
+P0131,Home Goods - Kitchenware #131,Home Goods,Kitchenware,297.29,531.8,SUP028,True
+P0132,Home Goods - Furniture #132,Home Goods,Furniture,236.28,410.79,SUP015,True
+P0133,Home Goods - Furniture #133,Home Goods,Furniture,259.65,467.45,SUP002,True
+P0134,Home Goods - Furniture #134,Home Goods,Furniture,230.04,361.67,SUP003,True
+P0135,Home Goods - Kitchenware #135,Home Goods,Kitchenware,159.0,330.48,SUP006,True
+P0136,Home Goods - Bedding #136,Home Goods,Bedding,270.22,478.95,SUP016,False
+P0137,Home Goods - Bedding #137,Home Goods,Bedding,273.03,426.99,SUP007,True
+P0138,Home Goods - Bedding #138,Home Goods,Bedding,285.77,618.81,SUP029,True
+P0139,Home Goods - Furniture #139,Home Goods,Furniture,195.07,353.84,SUP006,True
+P0140,Home Goods - Bedding #140,Home Goods,Bedding,108.67,214.16,SUP001,True
+P0141,Home Goods - Bedding #141,Home Goods,Bedding,240.6,493.89,SUP009,True
+P0142,Home Goods - Bedding #142,Home Goods,Bedding,155.91,240.15,SUP010,True
+P0143,Home Goods - Bedding #143,Home Goods,Bedding,140.84,298.78,SUP023,True
+P0144,Home Goods - Bedding #144,Home Goods,Bedding,48.36,77.38,SUP005,True
+P0145,Home Goods - Kitchenware #145,Home Goods,Kitchenware,191.19,300.32,SUP010,True
+P0146,Home Goods - Kitchenware #146,Home Goods,Kitchenware,214.78,333.11,SUP002,True
+P0147,Home Goods - Furniture #147,Home Goods,Furniture,216.28,336.74,SUP024,True
+P0148,Home Goods - Decor #148,Home Goods,Decor,296.19,521.88,SUP002,True
+P0149,Home Goods - Furniture #149,Home Goods,Furniture,246.65,533.52,SUP019,True
+P0150,Home Goods - Bedding #150,Home Goods,Bedding,229.71,405.07,SUP017,True
+P0151,Groceries - Dairy #151,Groceries,Dairy,23.76,34.87,SUP002,True
+P0152,Groceries - Produce #152,Groceries,Produce,27.38,36.51,SUP028,True
+P0153,Groceries - Dairy #153,Groceries,Dairy,2.32,3.34,SUP003,True
+P0154,Groceries - Produce #154,Groceries,Produce,5.33,7.12,SUP022,True
+P0155,Groceries - Dairy #155,Groceries,Dairy,22.89,33.76,SUP013,True
+P0156,Groceries - Produce #156,Groceries,Produce,12.5,17.32,SUP029,True
+P0157,Groceries - Dairy #157,Groceries,Dairy,8.26,13.12,SUP019,False
+P0158,Groceries - Produce #158,Groceries,Produce,29.16,38.29,SUP020,True
+P0159,Groceries - Produce #159,Groceries,Produce,16.78,26.81,SUP014,True
+P0160,Groceries - Meat #160,Groceries,Meat,17.51,27.85,SUP030,True
+P0161,Groceries - Meat #161,Groceries,Meat,19.62,29.6,SUP007,True
+P0162,Groceries - Meat #162,Groceries,Meat,19.57,28.87,SUP008,True
+P0163,Groceries - Meat #163,Groceries,Meat,3.27,4.53,SUP013,True
+P0164,Groceries - Dairy #164,Groceries,Dairy,26.93,38.69,SUP022,True
+P0165,Groceries - Meat #165,Groceries,Meat,9.77,13.25,SUP015,True
+P0166,Groceries - Meat #166,Groceries,Meat,11.89,17.54,SUP030,True
+P0167,Groceries - Produce #167,Groceries,Produce,29.28,46.73,SUP001,True
+P0168,Groceries - Packaged #168,Groceries,Packaged,17.01,23.69,SUP020,True
+P0169,Groceries - Produce #169,Groceries,Produce,21.17,28.55,SUP003,True
+P0170,Groceries - Dairy #170,Groceries,Dairy,25.03,39.67,SUP017,True
+P0171,Groceries - Meat #171,Groceries,Meat,19.18,27.34,SUP005,True
+P0172,Groceries - Meat #172,Groceries,Meat,26.25,34.48,SUP029,False
+P0173,Groceries - Produce #173,Groceries,Produce,12.54,19.35,SUP029,True
+P0174,Groceries - Dairy #174,Groceries,Dairy,6.21,9.18,SUP012,True
+P0175,Groceries - Meat #175,Groceries,Meat,29.16,45.27,SUP006,True
+P0176,Groceries - Packaged #176,Groceries,Packaged,15.12,21.54,SUP027,True
+P0177,Groceries - Meat #177,Groceries,Meat,3.58,5.58,SUP020,True
+P0178,Groceries - Produce #178,Groceries,Produce,29.99,47.95,SUP022,True
+P0179,Groceries - Meat #179,Groceries,Meat,23.53,37.26,SUP030,True
+P0180,Groceries - Produce #180,Groceries,Produce,8.93,12.82,SUP029,True
+P0181,Groceries - Dairy #181,Groceries,Dairy,28.71,42.54,SUP009,True
+P0182,Groceries - Produce #182,Groceries,Produce,20.81,30.91,SUP029,True
+P0183,Groceries - Produce #183,Groceries,Produce,5.18,7.78,SUP024,True
+P0184,Groceries - Dairy #184,Groceries,Dairy,23.62,34.39,SUP009,True
+P0185,Groceries - Meat #185,Groceries,Meat,17.45,25.62,SUP020,True
+P0186,Groceries - Dairy #186,Groceries,Dairy,13.3,17.82,SUP023,False
+P0187,Groceries - Meat #187,Groceries,Meat,23.14,34.39,SUP007,True
+P0188,Groceries - Meat #188,Groceries,Meat,7.96,10.67,SUP017,False
+P0189,Groceries - Packaged #189,Groceries,Packaged,11.82,17.46,SUP009,True
+P0190,Groceries - Produce #190,Groceries,Produce,14.25,22.39,SUP003,True
+P0191,Groceries - Packaged #191,Groceries,Packaged,16.39,25.16,SUP027,True
+P0192,Groceries - Meat #192,Groceries,Meat,19.42,30.27,SUP002,True
+P0193,Groceries - Produce #193,Groceries,Produce,6.12,9.66,SUP011,True
+P0194,Groceries - Dairy #194,Groceries,Dairy,9.23,13.27,SUP021,True
+P0195,Groceries - Meat #195,Groceries,Meat,15.79,22.08,SUP006,True
+P0196,Groceries - Packaged #196,Groceries,Packaged,8.72,11.53,SUP018,True
+P0197,Groceries - Packaged #197,Groceries,Packaged,5.59,7.52,SUP018,True
+P0198,Groceries - Produce #198,Groceries,Produce,19.94,27.01,SUP004,True
+P0199,Groceries - Produce #199,Groceries,Produce,27.11,39.1,SUP029,True
+P0200,Groceries - Dairy #200,Groceries,Dairy,6.82,9.26,SUP018,False

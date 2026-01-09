@@ -38,11 +38,18 @@ This project will show I can build an end-to-end data workflow (and later add ML
 ## Planned milestones / TODO List
 
 ### Week 2
--  [X] Create S3 data lake with encryption, versioning and public access block using cloudformation
+- [X] Create S3 data lake with encryption, versioning and public access block using cloudformation
 
--  [ ] create IAM  
-     - Data pipeline Role       DONE
-     - Data pipeline Policy     TODO
+- [x] create IAM  
+    - Data pipeline Role                           DONE
+    - Data pipeline Policy                         DONE
+
+- [ ] DAta GEneration & Data ingestion to s3
+    - generating synthetic data    DONE
+    - 
+
+
+
 
 
 
