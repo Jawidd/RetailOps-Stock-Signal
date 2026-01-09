@@ -48,10 +48,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - generating synthetic data    
     - data upload as dimensions and facts to s3
 
-- [ ] ATHENA
-    - create athena databasse                                    DONE
-    - create table (raw_products,raw_stores,raw_suppliers)          DONE
-    - create table (raw_inventory,raw_sales,raw_shipments)     TODO
+- [X] GLUE 
+    - create Glue database, Glue dimensions and Glue facts                       
 
 
 

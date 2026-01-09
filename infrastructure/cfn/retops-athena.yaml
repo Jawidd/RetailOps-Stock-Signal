@@ -134,6 +134,159 @@ Resources:
             - Name: country
               Type: string
 
+  # RAW Sales Facts
+  RawSalesTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: retailops
+      TableInput:
+        Name: raw_sales
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          skip.header.line.count: "1"
+          classification: "csv"
+          projection.enabled: "true"
+          projection.dt.type: "date"
+          projection.dt.range: "2024-07-01,NOW"
+          projection.dt.format: "yyyy-MM-dd"
+        PartitionKeys:
+          - Name: dt
+            Type: string
+        StorageDescriptor:
+          Location: !Sub
+            - "${BucketUri}raw/sales/"
+            - BucketUri: !ImportValue retailops-DataLakeBucketURI
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+            - Name: sale_id
+              Type: string
+            - Name: sale_date
+              Type: date
+            - Name: store_id
+              Type: string
+            - Name: product_id
+              Type: string
+            - Name: quantity_sold
+              Type: int
+            - Name: unit_price
+              Type: decimal(10,2)
+            - Name: discount_amount
+              Type: decimal(10,2)
+            - Name: total_amount
+              Type: decimal(10,2)
+
+    # RAW Inventory  Facts
+  RawInventoryTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: retailops
+      TableInput:
+        Name: raw_inventory
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          skip.header.line.count: "1"
+          classification: "csv"
+          projection.enabled: "true"
+          projection.dt.type: "date"
+          projection.dt.range: "2024-07-01,NOW"
+          projection.dt.format: "yyyy-MM-dd"
+        PartitionKeys:
+          - Name: dt
+            Type: string
+        StorageDescriptor:
+          Location: !Sub
+            - "${BucketUri}raw/inventory/"
+            - BucketUri: !ImportValue retailops-DataLakeBucketURI
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+            - Name: snapshot_date
+              Type: date
+            - Name: store_id
+              Type: string
+            - Name: product_id
+              Type: string
+            - Name: quantity_on_hand
+              Type: int
+            - Name: quantity_on_order
+              Type: int
+            - Name: reorder_point
+              Type: int
+            - Name: last_restock_date
+              Type: date
+
+  # RAW Shipment Facts
+  RawShipmentsTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: retailops
+      TableInput:
+        Name: raw_shipments
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          skip.header.line.count: "1"
+          classification: "csv"
+          projection.enabled: "true"
+          projection.dt.type: "date"
+          projection.dt.range: "2024-07-01,NOW"
+          projection.dt.format: "yyyy-MM-dd"
+        PartitionKeys:
+          - Name: dt
+            Type: string
+        StorageDescriptor:
+          Location: !Sub
+            - "${BucketUri}raw/shipments/"
+            - BucketUri: !ImportValue retailops-DataLakeBucketURI
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+            - Name: shipment_id
+              Type: string
+            - Name: order_date
+              Type: date
+            - Name: expected_date
+              Type: date
+            - Name: received_date
+              Type: date
+            - Name: store_id
+              Type: string
+            - Name: product_id
+              Type: string
+            - Name: supplier_id
+              Type: string
+            - Name: quantity_ordered
+              Type: int
+            - Name: quantity_received
+              Type: int
+            - Name: is_late
+              Type: boolean
+
+
 
 
 
@@ -153,3 +306,15 @@ Outputs:
   RawSuppliersTableName:
     Description:  RawSuppliers Table/dimension Name
     Value: !Ref RawSuppliersTable
+  
+  RawSalesTableName:
+    Description:  RawSales Fact Name
+    Value: !Ref RawSalesTable
+
+  RawInventoryTableName:
+    Description:  RawInventory Fact Name
+    Value: !Ref RawInventoryTable
+
+  RawShipmentsTableName:
+    Description:  RawShipments Fact Name
+    Value: !Ref RawShipmentsTable
