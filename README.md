@@ -41,13 +41,16 @@ This project will show I can build an end-to-end data workflow (and later add ML
 - [X] Create S3 data lake with encryption, versioning and public access block using cloudformation
 
 - [x] create IAM  
-    - Data pipeline Role                           DONE
-    - Data pipeline Policy                         DONE
+    - Data pipeline Role                           
+    - Data pipeline Policy                         
 
-- [ ] DAta GEneration & Data ingestion to s3
-    - generating synthetic data    DONE
-    - 
+- [X] DAta GEneration & Data ingestion to s3
+    - generating synthetic data    
+    - data upload as dimensions and facts to s3
 
+- [ ] ATHENA
+    - create athena databasse
+    - create dimension and fact tables in Athena
 
 
 
