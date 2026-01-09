@@ -94,4 +94,6 @@ Outputs:
   DataBucketURI:
     Description:  RetailOps data lake bucket URI
     Value:   !Sub "s3://${DataLakeBucket}"
+    Export:
+      Name: retailops-DataLakeBucketURI
       

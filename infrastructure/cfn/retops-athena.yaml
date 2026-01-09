@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >- 
+  GLUE DATABASE
+  GLUE TABLES (inventory,products,sales,shipments,stores,suppliers
+  Athena Workgroup (query result location, encryption ...)
+  Bucket for athena results
+  IAM permissions (for Athena/Glue/S3 access)
+
+
+
+Resources:
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput: 
+        Name: retailops
+        LocationUri: !ImportValue retailops-DataLakeBucketURI
+  
+  RawProductsTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: retailops
+      TableInput: 
+        Name: raw_products
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          skip.header.line.count: "1"
+          classification: "csv"
+        StorageDescriptor:
+          Location: !Sub
+            - "${BucketUri}/raw/products/"
+            - BucketUri: !ImportValue retailops-DataLakeBucketURI
+          InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+          OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+          SerdeInfo:
+            SerializationLibrary: "org.apache.hadoop.hive.serde2.OpenCSVSerde"
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+            - Name: product_id
+              Type: string
+            - Name: product_name
+              Type: string
+            - Name: category
+              Type: string
+            - Name: unit_cost
+              Type: decimal(10,2)
+            - Name: unit_price
+              Type: decimal(10,2)
+            - Name: supplier_id
+              Type: string
+            - Name: is_active
+              Type: boolean
+
+
+
+
+
+Outputs:
+  GlueDatabaseName:
+    Description: GlueDatabaseName
+    Value: !Ref GlueDatabase
+
+  RawProductsTableName:
+    Description: RawProductsTableName
+    Value: !Ref RawProductsTable
+    
+
+      

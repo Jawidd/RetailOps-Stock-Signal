@@ -16,6 +16,7 @@ echo "Region: $REGION"
 STACK_FILES=(
   "retops-s3datalake.yaml" 
   "retops-iam.yaml"
+  "retops-athena.yaml"
 
 )
 

@@ -49,8 +49,9 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - data upload as dimensions and facts to s3
 
 - [ ] ATHENA
-    - create athena databasse
-    - create dimension and fact tables in Athena
+    - create athena databasse                                                           DONE
+    - create table (raw_products)                                                       DONE
+    - create table (raw_inventory,raw_sales,raw_shipments,raw_stores,raw_suppliers)     TODO
 
 
 
