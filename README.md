@@ -49,7 +49,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - data upload as dimensions and facts to s3
 
 - [X] GLUE 
-    - create Glue database, Glue dimensions and Glue facts                       
+    - create Glue database, Glue dimensions and Glue facts
+    - create s3 bucket for Athena output                       
 
 
 

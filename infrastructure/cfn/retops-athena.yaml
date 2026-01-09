@@ -7,6 +7,10 @@ Description: >-
   IAM permissions (for Athena/Glue/S3 access)
 
 
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: "retailops"
 
 Resources:
   GlueDatabase:
@@ -16,6 +20,43 @@ Resources:
       DatabaseInput: 
         Name: retailops
         LocationUri: !ImportValue retailops-DataLakeBucketURI
+
+
+  # s3 bucket for AThena Results
+  AthenaQueryResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectNameInput}-athena-query-results-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # athena workgroup to enforce output dir and encryption
+  RetailOpsAthenaWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: retailops-primary
+      Description: RetailOps Athena workgroup to enforce output dir and encryption
+      State: ENABLED
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+        ResultConfiguration:
+          OutputLocation: !Sub
+            - "s3://${ResultsBucket}/"
+            - ResultsBucket: !Ref AthenaQueryResultsBucket
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3       
+
+
+
+
   
   # RAW Products Table/Dimension
   RawProductsTable:
@@ -294,6 +335,30 @@ Outputs:
   GlueDatabaseName:
     Description: GlueDatabaseName
     Value: !Ref GlueDatabase
+   
+  AthenaQueryResultsBucketName:
+    Description: AthenaQueryResultsBucketName
+    Value: !Ref AthenaQueryResultsBucket
+    Export: 
+      Name: AthenaQueryResultsBucketName
+  AthenaQueryResultsBucketARN:
+    Description: AthenaQueryResultsBucketARN
+    Value: !GetAtt AthenaQueryResultsBucket.Arn
+    Export:
+      Name: AthenaQueryResultsBucketARN
+  AthenaQueryResultsBucketURI:
+    Description: AthenaQueryResultsBucketURI
+    Value:   !Sub "s3://${AthenaQueryResultsBucket}"
+    Export:
+      Name: AthenaQueryResultsBucketURI
+  
+  RetailOpsAthenaWorkGroupName:
+    Description: RetailOpsAthenaWorkGroupName
+    Value: !Ref RetailOpsAthenaWorkGroup
+    Export:
+      Name: retailops-AthenaWorkGroupName
+
+ 
 
   RawProductsTableName:
     Description: RawProducts Table/dimension Name
@@ -318,3 +383,5 @@ Outputs:
   RawShipmentsTableName:
     Description:  RawShipments Fact Name
     Value: !Ref RawShipmentsTable
+
+  
