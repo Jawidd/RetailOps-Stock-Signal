@@ -12,11 +12,12 @@ echo "Deploying CloudFormation stacks..."
 echo "Region: $REGION"
 
 
-# LIST OF STACKS TO  DEPLOY/UPDATE
+# LIST OF STACKS TO  DEPLOY/UPDATE 
+# The order is important as iamstacj import values from both stacks(s3datalake,athena)
 STACK_FILES=(
   "retops-s3datalake.yaml" 
-  "retops-iam.yaml"
   "retops-athena.yaml"
+  "retops-iam.yaml"
 
 )
 

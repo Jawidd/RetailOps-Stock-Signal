@@ -67,9 +67,50 @@ Resources:
                 - "${BucketArn}/*"
                 - BucketArn: !ImportValue retailops-DataLakeBucketARN
 
-          #  policy statement for S3: Athena results bucket access once s3 backet fir results created
-          #  policy statement for  Athena: query execution 
-          #  policy statement for  Glue: Data Catalog 
+          #  S3: ATHENA BUCKET ACCESS
+          - Sid: S3AthenaBucketList
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:  !ImportValue AthenaQueryResultsBucketARN
+    
+
+          #  3: Athena results RW
+          - Sid: S3AthenaBucketRW
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: 
+              - !Sub
+                - "${BucketArn}/*"
+                - BucketArn: !ImportValue AthenaQueryResultsBucketARN
+
+          # Athena: run queries and read status/results
+          - Sid: AthenaQueryExecution
+            Effect: Allow
+            Action:
+              - athena:StartQueryExecution
+              - athena:GetQueryExecution
+              - athena:GetQueryResults
+              - athena:StopQueryExecution
+              - athena:GetWorkGroup
+              - athena:ListWorkGroups
+            Resource: "*"
+
+          # Glue: read Data Catalog (Athena tables live here)
+          - Sid: GlueDataCatalogRead
+            Effect: Allow
+            Action:
+              - glue:GetDatabase
+              - glue:GetDatabases
+              - glue:GetTable
+              - glue:GetTables
+              - glue:GetPartition
+              - glue:GetPartitions
+            Resource: "*"
 
 Outputs:
   RetailOpsPipelineRoleARN:

@@ -50,7 +50,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 - [X] GLUE 
     - create Glue database, Glue dimensions and Glue facts
-    - create s3 bucket for Athena output                       
+    - create s3 bucket for Athena output
+    - create workgroup to force output dir and encryption
+    - add iam policies for accessing and writing to s3 output bucket
+    - add iam policy to preform queries                      
 
 
 
