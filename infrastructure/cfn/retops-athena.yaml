@@ -17,6 +17,7 @@ Resources:
         Name: retailops
         LocationUri: !ImportValue retailops-DataLakeBucketURI
   
+  # RAW Products Table/Dimension
   RawProductsTable:
     Type: AWS::Glue::Table
     DependsOn: GlueDatabase
@@ -57,6 +58,81 @@ Resources:
             - Name: is_active
               Type: boolean
 
+  # RAW Stores Table/Dimension
+  RawStoresTable:
+      Type: AWS::Glue::Table
+      DependsOn: GlueDatabase
+      Properties:
+        CatalogId: !Ref AWS::AccountId
+        DatabaseName: retailops
+        TableInput:
+          Name: raw_stores
+          TableType: EXTERNAL_TABLE
+          Parameters:
+            skip.header.line.count: "1"
+            classification: "csv"
+          StorageDescriptor:
+            Location: !Sub
+              - "${BucketUri}raw/stores/"
+              - BucketUri: !ImportValue retailops-DataLakeBucketURI
+            InputFormat: org.apache.hadoop.mapred.TextInputFormat
+            OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+            SerdeInfo:
+              SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+              Parameters:
+                separatorChar: ","
+                quoteChar: "\""
+                escapeChar: "\\"
+            Columns:
+              - Name: store_id
+                Type: string
+              - Name: store_name
+                Type: string
+              - Name: region
+                Type: string
+              - Name: store_type
+                Type: string
+              - Name: sq_footage
+                Type: int
+              - Name: opened_date
+                Type: date
+
+  # RAW Suppliers Table/Dimension
+  RawSuppliersTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: retailops
+      TableInput:
+        Name: raw_suppliers
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          skip.header.line.count: "1"
+          classification: "csv"
+        StorageDescriptor:
+          Location: !Sub
+            - "${BucketUri}raw/suppliers/"
+            - BucketUri: !ImportValue retailops-DataLakeBucketURI
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+            - Name: supplier_id
+              Type: string
+            - Name: supplier_name
+              Type: string
+            - Name: lead_time_days
+              Type: int
+            - Name: on_time_rate
+              Type: decimal(5,3)
+            - Name: country
+              Type: string
 
 
 
@@ -67,8 +143,13 @@ Outputs:
     Value: !Ref GlueDatabase
 
   RawProductsTableName:
-    Description: RawProductsTableName
+    Description: RawProducts Table/dimension Name
     Value: !Ref RawProductsTable
-    
 
-      
+  RawStoresTableName:
+    Description:  RawStores Table/dimension Name
+    Value: !Ref RawStoresTable
+  
+  RawSuppliersTableName:
+    Description:  RawSuppliers Table/dimension Name
+    Value: !Ref RawSuppliersTable
