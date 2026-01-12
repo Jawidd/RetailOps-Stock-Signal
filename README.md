@@ -1,0 +1,129 @@
+# RetailOps Companion
+
+Work in progress: building a retail analytics platform with a local Postgres + dbt stack and an AWS data lake footprint.
+
+
+## Current status
+
+* Week 1 Completed — Local analytics stack (Favorita + Postgres + dbt + Metabase + R checks) 
+* Week 2 Completed— Synthetic data + AWS data lake  Implemented 
+* Week 3 Planned— dbt transformation layer  
+* Week 4 Planned— Orchestration + monitoring  
+* Week 5 Planned— Analytics + BI layer  
+* Week 6 Planned— ML (demand forecasting)  
+
+## Tech stack
+
+Implemented
+
+* Postgres
+* dbt (dbt-postgres)
+* Metabase
+* Python
+* SQL
+* R
+* Docker / Docker Compose
+* AWS CloudFormation (S3 / Glue / Athena / IAM templates)
+
+Planned
+
+* Orchestration (scheduled runs, retries, notifications)
+* Monitoring and alerting
+* Forecasting / ML
+
+
+## Repo At A Glance
+
+* `docker-compose.yml` — Postgres + Metabase
+* `Dockerfile`
+* `requirements.txt`
+* `scripts/02_load_csv_to_postgres.py` — load raw CSVs into Postgres
+* `dbt/models/staging/stg_*.sql` — staging models
+* `dbt/models/marts/mart_store_daily_sales.sql` — first mart table
+* `infrastructure/cfn/retops-*.yaml` — CloudFormation templates (S3 / Glue / Athena / IAM)
+* `infrastructure/deploy-all-cfn-stacks.sh` — deploy helper
+
+## Current Architecture (WIP)
+
+- S3 data lake 
+- Glue Data Catalog + Athena: templates for serverless queryingtemplate that is still focused on S3 while Athena/Glue permissions are being finalized.
+
+## How to run locally (WIP)
+
+TODO
+
+## Week 1 — Local analytics stack (Favorita + Postgres + dbt + Metabase & R )
+
+Ship a complete local workflow: raw data → checks → dbt models → dashboard export.
+
+#### What I did
+
+* Loaded Favorita CSVs into Postgres (raw schema).
+* Ran R scripts for data availability checks + quality checks, and generated a report.
+* Built dbt staging models and a daily sales mart.
+* Built charts in Metabase and exported the dashboard.
+
+#### Evidence (R report)
+
+* Source: `experiments/r_pipeline/R/reports/week1_report.Rmd`
+* HTML: `experiments/r_pipeline/R/reports/week1_report.html`
+* Screenshot: `experiments/r_pipeline/R/reports/week1-R-dashboard-Screenshot.png`
+
+![Week 1 R report screenshot](experiments/r_pipeline/R/reports/week1-R-dashboard-Screenshot.png)
+
+#### Evidence (Metabase exports)
+
+* PNG: `output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png`
+* PDF: `output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.pdf`
+
+![Week 1 Metabase dashboard](output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png)
+
+
+
+
+### Week 2 — Synthetic data + AWS data lake (implemented, execution proof TODO)
+
+#### Goal
+
+Extend the project beyond Favorita by adding retail ops concepts (orders/inventory/shipping), then build a cloud-friendly data lake foundation.
+
+#### What I did
+
+* Added a synthetic data generator to create operational datasets (products, stores, suppliers, sales, inventory, shipments).
+* Wrote an S3 upload path that supports dimension uploads and date-partitioned fact data.
+* Built CloudFormation templates for the AWS footprint (S3 + Glue + Athena + IAM).
+
+#### Evidence (synthetic data + upload scripts)
+
+* Generator: `scripts/03_generate_synthetic_data.py`
+* Outputs: `data/synthetic/*.csv`
+* Upload script: `scripts/04_upload_to_s3.py`
+
+#### Evidence (CloudFormation)
+
+* Templates: `infrastructure/cfn/retops-*.yaml`
+* Deploy script: `infrastructure/deploy-all-cfn-stacks.sh`
+
+
+
+* TODO Add screenshots for:
+
+  * S3 bucket folder structure
+  * Athena query results with partition pruning
+* Save logs/outputs from running the deploy + upload scripts
+
+### Week 3 — dbt transformation layer (planned)
+
+Goal: expand modeling beyond one mart and formalize transformations (more marts, clearer grains, tests).
+
+Planned deliverables:
+
+* More marts (inventory daily, supplier performance, order fulfillment)
+* dbt tests (not null, unique, relationships)
+* Documentation and model contracts (where useful)
+
+
+
+### Week 4 — Orchestration + monitoring (planned)
+### Week 5 — Analytics + BI layer (planned)
+### Week 6 — ML (demand forecasting) (planned)
