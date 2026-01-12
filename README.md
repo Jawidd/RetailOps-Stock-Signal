@@ -7,7 +7,7 @@ Work in progress: building a retail analytics platform with a local Postgres + d
 
 * Week 1 Completed — Local analytics stack (Favorita + Postgres + dbt + Metabase + R checks) 
 * Week 2 Completed— Synthetic data + AWS data lake  Implemented 
-* Week 3 Planned— dbt transformation layer  
+* Week 3 In Progress— dbt transformation layer  
 * Week 4 Planned— Orchestration + monitoring  
 * Week 5 Planned— Analytics + BI layer  
 * Week 6 Planned— ML (demand forecasting)  
@@ -37,9 +37,9 @@ Planned
 * `docker-compose.yml` — Postgres + Metabase
 * `Dockerfile`
 * `requirements.txt`
-* `scripts/02_load_csv_to_postgres.py` — load raw CSVs into Postgres
-* `dbt/models/staging/stg_*.sql` — staging models
-* `dbt/models/marts/mart_store_daily_sales.sql` — first mart table
+* `scripts/week01-load__favorita_csv_to_postgres.py` — load raw CSVs into Postgres
+* `experiments/favorita-dbt-postgresql/dbt/models/staging/stg_*.sql` — staging models
+* `experiments/favorita-dbt-postgresql/dbt/models/marts/mart_store_daily_sales.sql` — first mart table
 * `infrastructure/cfn/retops-*.yaml` — CloudFormation templates (S3 / Glue / Athena / IAM)
 * `infrastructure/deploy-all-cfn-stacks.sh` — deploy helper
 
@@ -65,11 +65,11 @@ Ship a complete local workflow: raw data → checks → dbt models → dashboard
 
 #### Evidence (R report)
 
-* Source: `experiments/r_pipeline/R/reports/week1_report.Rmd`
-* HTML: `experiments/r_pipeline/R/reports/week1_report.html`
-* Screenshot: `experiments/r_pipeline/R/reports/week1-R-dashboard-Screenshot.png`
+* Source: `experiments/favorita-r-pipeline/R/reports/week1_report.Rmd`
+* HTML: `experiments/favorita-r-pipeline/R/reports/week1_report.html`
+* Screenshot: `experiments/favorita-r-pipeline/R/reports/week1-R-dashboard-Screenshot.png`
 
-![Week 1 R report screenshot](experiments/r_pipeline/R/reports/week1-R-dashboard-Screenshot.png)
+![Week 1 R report screenshot](experiments/favorita-r-pipeline/R/reports/week1-R-dashboard-Screenshot.png)
 
 #### Evidence (Metabase exports)
 
@@ -95,22 +95,18 @@ Extend the project beyond Favorita by adding retail ops concepts (orders/invento
 
 #### Evidence (synthetic data + upload scripts)
 
-* Generator: `scripts/03_generate_synthetic_data.py`
+* Generator: `scripts/01_generate_synthetic_data.py`
 * Outputs: `data/synthetic/*.csv`
-* Upload script: `scripts/04_upload_to_s3.py`
+* Upload script: `scripts/02_upload_to_s3.py`
+* Week 2 Athena Query example
+
+![Week 2 Athena Query example](output/week2-Athena-GLUE-S3/query_row_count_all_tabkes.png)
 
 #### Evidence (CloudFormation)
 
 * Templates: `infrastructure/cfn/retops-*.yaml`
 * Deploy script: `infrastructure/deploy-all-cfn-stacks.sh`
 
-
-
-* TODO Add screenshots for:
-
-  * S3 bucket folder structure
-  * Athena query results with partition pruning
-* Save logs/outputs from running the deploy + upload scripts
 
 ### Week 3 — dbt transformation layer (planned)
 

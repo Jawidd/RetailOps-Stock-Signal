@@ -129,7 +129,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - add iam policies for accessing and writing to s3 output bucket
     - add iam policy to preform queries                      
 
+
 ### Week 3: Cloud dbt / orchestration / ML
+
+- [] dbt Project Setup
 
 
 
