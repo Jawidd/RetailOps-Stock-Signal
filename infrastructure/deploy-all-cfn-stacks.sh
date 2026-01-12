@@ -26,7 +26,7 @@ for file in "${STACK_FILES[@]}"; do
   template="$TEMPLATE_DIR/$file"
   stack_name=$(basename "$file" .yaml)
 
-  echo "Deploying stack: $stack_name"
+  echo "Deploying stack:           $stack_name"
 
   aws cloudformation deploy \
     --stack-name "$stack_name" \
