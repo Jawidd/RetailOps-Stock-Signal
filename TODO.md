@@ -1,29 +1,15 @@
 # RetailOps Companion
 
-A simple portfolio project where I build a small retail analytics pipeline:
-**generate data → load to a database → create clean analytics tables → show a dashboard**.
-Later, I will add **forecasting + reorder recommendations**.
+A production-grade retail analytics data platform on AWS, demonstrating modern data engineering practices: data lake architecture, dimensional modeling with dbt, automated orchestration, and ML-ready feature engineering.
 
 ---
 
 ## Current status
-- dataset:  Favorita Grocery Sales Forecasting (Kaggle)
-- database: PostgreSQL 
-- Data Build Tool: dbt-core with dbt-postgres adapter
-- Pipeline Milestones:
-    - Staging Layer: Completed. Created stg_ models for raw stores, oil prices, and transactions data to standardize field names and data types.
-    Marts Layer: Completed. Developed a mart_daily_sales model that aggregates unit sales by date and store to provide a clean source for reporting.
-- Visualization:
-    Tool: Metabase (Connected to PostgreSQL).
-    Dashboard: Built a "Daily Sales Overview" dashboard featuring time-series trends and store performance.
-- Artifacts:
-    /dbt/snapshots/Metabase - Mart_daily_sales_Dash.pdf
-
+- Documenting Week 2: Data Lake Foundation + Athena Setup
 
 ### Notes
 - it can be holiday for stores from particular cities or states. a column should be added.
 
----
 
 ## Goal (why I’m building this)
 Retail teams need answers like:
@@ -35,31 +21,14 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 ---
 
+
 ## Planned milestones / TODO List
 
-### Week 2
-- [X] Create S3 data lake with encryption, versioning and public access block using cloudformation
-
-- [x] create IAM  
-    - Data pipeline Role                           
-    - Data pipeline Policy                         
-
-- [X] DAta GEneration & Data ingestion to s3
-    - generating synthetic data    
-    - data upload as dimensions and facts to s3
-
-- [X] GLUE 
-    - create Glue database, Glue dimensions and Glue facts
-    - create s3 bucket for Athena output
-    - create workgroup to force output dir and encryption
-    - add iam policies for accessing and writing to s3 output bucket
-    - add iam policy to preform queries                      
 
 
 
 
-
-### Week 1 
+###  Week 1: Local analytics pipeline done in repo
 - [X] Create a repo structure
 
 - [X] Setup dataset
@@ -110,8 +79,6 @@ This project will show I can build an end-to-end data workflow (and later add ML
 ### Week 1 (Using R)
 
 
-## Implementation Tasks
-
 1. [X] Docker Setup
     - Create  R environment
     - Install necessary packages (archive, DBI, RPostgres, DataExplorer, etc.)
@@ -144,32 +111,26 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 
 
+### Week 2 synthetic data + AWS data lake 
+- [X] Create S3 data lake with encryption, versioning and public access block using cloudformation
+
+- [x] create IAM  
+    - Data pipeline Role                           
+    - Data pipeline Policy                         
+
+- [X] DAta GEneration & Data ingestion to s3
+    - generating synthetic data    
+    - data upload as dimensions and facts to s3
+
+- [X] GLUE 
+    - create Glue database, Glue dimensions and Glue facts
+    - create s3 bucket for Athena output
+    - create workgroup to force output dir and encryption
+    - add iam policies for accessing and writing to s3 output bucket
+    - add iam policy to preform queries                      
+
+### Week 3: Cloud dbt / orchestration / ML
 
 
-### Next (after MVP)
-- [ ] Add dbt models + tests
-- [ ] Add orchestration + alerts
-- [ ] Add forecasting + reorder recommendations
-- [ ] Deploy parts on AWS
 
----
 
-## Tech (will be confirmed as I build)
-- Python
-- Postgres (Docker)
-- SQL (and later dbt)
-- Dashboard tool (Metabase or Power BI)
-
----
-
-## Repo structure 
-data/
-src/
-warehouse/
-dashboards/
-
----
-
-## How to run
-!!
----
