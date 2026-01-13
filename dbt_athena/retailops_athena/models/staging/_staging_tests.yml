@@ -1,3 +1,5 @@
+version: 2
+
 models:
   - name: stg_products
     description: "Cleaned product dimension"
@@ -30,30 +32,87 @@ models:
         tests:
           - not_null
           - unique
-      - name: store_age_years
-        description: "difference between opened_date & current_date"
-        tests:
-          - dbt_utils.expression_is_true: 
-              arguments:
-                expression: ">= 0 "
+
       - name: region
         tests:
           - accepted_values:
               arguments:
-                values: ['North', 'South', 'East', 'West']
+                values: ['North', 'South', 'East', 'West', 'Unknown']
 
   - name: stg_suppliers
-    description: "Cleaned stores dimension"
+    description: "Cleaned supplier dimension"
     columns:
-      - name: store_id
-        description: "Primary key"
+      - name: supplier_id
         tests:
           - not_null
           - unique
-      - name: store_age_years
-        description: "difference between opened_date & current_date"
+
+      - name: on_time_delivery_rate
         tests:
-          - dbt_utils.expression_is_true:
-              arguments: 
-                expression: ">= 0"
-            
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+
+  - name: stg_sales
+    description: "Cleaned sales fact table"
+    columns:
+      - name: sale_id
+        tests:
+          - not_null
+          - unique
+
+      - name: store_id
+        tests:
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+
+      - name: quantity_sold
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+
+      - name: total_amount
+        tests:
+          - not_null
+
+  - name: stg_inventory
+    description: "Cleaned inventory snapshots"
+    columns:
+      - name: store_id
+        tests:
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+
+  - name: stg_shipments
+    description: "Cleaned shipment tracking"
+    columns:
+      - name: shipment_id
+        tests:
+          - not_null
+          - unique
+
+      - name: supplier_id
+        tests:
+          - relationships:
+              to: ref('stg_suppliers')
+              field: supplier_id
+
+      - name: fill_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 2

@@ -137,7 +137,11 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - Create new dbt project for Athena
     - add stage for all raw tables then 
     - dbt debug / dbt deps / dbt parse 
-    - dbt run --select staging
+    - dbt run --select staging         <!-- SUCCESS -->
+    - dbt test --select source:raw_retailops 2>&1 | tee raw_source_tests_$(date +%Y%m%d_%H%M%S).txt 
+    - dbt test --select staging        <!-- SUCCESS -->
+
+
 
 
 
