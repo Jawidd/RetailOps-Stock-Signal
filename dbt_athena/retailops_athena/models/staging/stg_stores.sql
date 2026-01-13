@@ -12,7 +12,6 @@ cleaned as (
         store_name,
         region,
         store_type,
-        sq_footage,
         cast(sq_footage as int) as square_footage,
         cast(opened_date as date) as opened_date,
         case
@@ -22,6 +21,7 @@ cleaned as (
             else 'Unknown'
         end as store_size_category,
         date_diff('year', cast(opened_date as date), current_date) as store_age_years,
+        current_timestamp as dbt_loaded_at
     from source
 ) 
 

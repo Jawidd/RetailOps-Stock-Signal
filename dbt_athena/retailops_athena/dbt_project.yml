@@ -33,23 +33,19 @@ models:
   retailops_athena:
     staging:
       +materialized: view
-      +database: retailops
       +schema: staging
-      +tags: ['staging']
     
-    intermediate:
-      +materialized: view
-      +database: retailops
-      +schema: intermediate
-      +tags: ['intermediate']
+    # intermediate:
+    #   +materialized: view
+    #   +schema: intermediate
+
     
-    marts:
-      +materialized: table
-      +database: retailops
-      +schema: marts
-      +file_format: parquet  # Athena optimization
-      +write_compression: snappy
-      +tags: ['marts']
+    # marts:
+    #   +materialized: table
+    #   +schema: marts
+    #   +file_format: parquet  # Athena optimization
+    #   +write_compression: snappy
+
 
 vars:
   # Business logic variables

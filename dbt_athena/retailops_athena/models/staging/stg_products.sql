@@ -23,11 +23,12 @@ cleaned as (
         supplier_id,
 
         cast(
-            case 
+            (case 
                 when lower(is_active) in ('true','t','1','yes') then true
                 else false
-            end as boolean   
-            ) as is_active,
+            end) as boolean
+        ) as is_active,
+        current_timestamp as dbt_loaded_at
 
     
     from source

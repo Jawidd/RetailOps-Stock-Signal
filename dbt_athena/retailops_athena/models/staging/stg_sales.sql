@@ -25,12 +25,13 @@ cleaned as(
         extract(year from cast(sale_date as date)) as sale_year,
         extract(month from cast(sale_date as date)) as sale_month,
         extract(day from cast(sale_date as date)) as sale_day,
-        extract(dow from cast(sale_date as date)) as day_of_week,
-        date_format(cast(sale_date as date), '%W') as day_name,
+        extract(day_of_week from cast(sale_date as date)) as day_of_week,
+        format_datetime(cast(sale_date as timestamp), 'EEEE') as day_name,
         case
-           (sale_date as  when extract(dow from castdate)) in (6, 0) then true
+            when extract(day_of_week from cast(sale_date as date)) in (6, 7) then true
             else false
         end as is_weekend,
+        current_timestamp as dbt_loaded_at
 
     from source
     where sale_date is not null

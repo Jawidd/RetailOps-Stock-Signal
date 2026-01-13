@@ -3,9 +3,9 @@ version: 2
 sources:
   - name: raw_retailops
     description: "Raw retail operations data from S3, cataloged in AWS Glue"
-    database: retailops
-    schema: retailops  # Glue database name
-    
+    database: AwsDataCatalog
+    schema: retailops
+        
     tables:
 
       - name: raw_products
