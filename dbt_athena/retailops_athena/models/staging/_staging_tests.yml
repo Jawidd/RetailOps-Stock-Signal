@@ -7,14 +7,53 @@ models:
         tests:
           - not_null
           - unique
-      - name: unit_margin
+      - name: unit_gross_margin
         description: "Profit per unit (price - cost)"
         tests:
           - dbt_utils.expression_is_true:
-              expression: ">= 0"
+              arguments:
+                expression: "unit_gross_margin >= 0"
       - name: supplier_id
         description: "Foreign key to suppliers"
         tests:
           - relationships:
-              to: ref('stg_suppliers')
-              field: supplier_id
+              arguments:
+                to: ref('stg_suppliers')
+                field: product_id
+
+
+  - name: stg_stores
+    description: "Cleaned stores dimension"
+    columns:
+      - name: store_id
+        description: "Primary key"
+        tests:
+          - not_null
+          - unique
+      - name: store_age_years
+        description: "difference between opened_date & current_date"
+        tests:
+          - dbt_utils.expression_is_true: 
+              arguments:
+                expression: ">= 0 "
+      - name: region
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['North', 'South', 'East', 'West']
+
+  - name: stg_suppliers
+    description: "Cleaned stores dimension"
+    columns:
+      - name: store_id
+        description: "Primary key"
+        tests:
+          - not_null
+          - unique
+      - name: store_age_years
+        description: "difference between opened_date & current_date"
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments: 
+                expression: ">= 0"
+            

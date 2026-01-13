@@ -135,7 +135,10 @@ This project will show I can build an end-to-end data workflow (and later add ML
 - [] dbt Project Setup
     - add athena adapter to requierments
     - Create new dbt project for Athena
-    - add stage_products,stage_storessith 
+    - add stage for all raw tables then 
+    - dbt debug / dbt deps / dbt parse 
+    - dbt run --select staging
+
 
 
 
