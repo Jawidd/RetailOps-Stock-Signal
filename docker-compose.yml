@@ -1,71 +1,71 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: retailops_postgres
-    environment:
-      POSTGRES_USER:      retailops
-      POSTGRES_PASSWORD:  retailops123
-      POSTGRES_DB:        retailops
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U retailops"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # postgres:
+  #   image: postgres:16
+  #   container_name: retailops_postgres
+  #   environment:
+  #     POSTGRES_USER:      retailops
+  #     POSTGRES_PASSWORD:  retailops123
+  #     POSTGRES_DB:        retailops
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U retailops"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
-  r:
-    container_name: retailops_r
-    build:
-      context: .
-      dockerfile: R/Dockerfile
-    working_dir: /app/R
-    volumes:
-      - ./:/app
-    tty: true
-    stdin_open: true
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # r:
+  #   container_name: retailops_r
+  #   build:
+  #     context: .
+  #     dockerfile: R/Dockerfile
+  #   working_dir: /app/R
+  #   volumes:
+  #     - ./:/app
+  #   tty: true
+  #   stdin_open: true
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
 
-    mem_limit: 5g
-    memswap_limit: 5g     
-    cpus: "2.0"
-    shm_size: "1g"   
+  #   mem_limit: 5g
+  #   memswap_limit: 5g     
+  #   cpus: "2.0"
+  #   shm_size: "1g"   
 
 
 
-  metabase:
-    image: metabase/metabase:latest
-    container_name: retailops_metabase
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-    environment:
-      - MB_DB_TYPE=postgres
-      - MB_DB_DBNAME=retailops    
-      - MB_DB_PORT=5432
-      - MB_DB_USER=retailops       
-      - MB_DB_PASS=retailops123        
-      - MB_DB_HOST=postgres #  container name     
+  # metabase:
+  #   image: metabase/metabase:latest
+  #   container_name: retailops_metabase
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     - MB_DB_TYPE=postgres
+  #     - MB_DB_DBNAME=retailops    
+  #     - MB_DB_PORT=5432
+  #     - MB_DB_USER=retailops       
+  #     - MB_DB_PASS=retailops123        
+  #     - MB_DB_HOST=postgres #  container name     
+
 
   python:
     container_name: retailops_python
     build: .
     working_dir: /app
+    env_file:
+      - .env
     volumes:
       - ./:/app
+      - /home/jawid/.dbt:/root/.dbt
     tty: true
     stdin_open: true
     ports:
       - "8080:8080"
-
-
-
-
 
 volumes:
   pgdata:

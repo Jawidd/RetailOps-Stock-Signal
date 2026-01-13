@@ -1,0 +1,140 @@
+[0m22:58:33.374065 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fc0409970>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fbfdd0860>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fbfd5daf0>]}
+
+
+============================== 22:58:33.381945 | 68986560-148e-4c6a-8416-b3431e86000d ==============================
+[0m22:58:33.381945 [info ] [MainThread]: Running with dbt=1.11.2
+[0m22:58:33.382975 [debug] [MainThread]: running dbt with arguments {'use_experimental_parser': 'False', 'invocation_command': 'dbt init retailops_athena', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'target_path': 'None', 'write_json': 'True', 'log_cache_events': 'False', 'no_print': 'None', 'introspect': 'True', 'log_path': 'logs', 'partial_parse': 'True', 'fail_fast': 'False', 'warn_error': 'None', 'static_parser': 'True', 'empty': 'None', 'printer_width': '80', 'send_anonymous_usage_stats': 'True', 'log_format': 'default', 'indirect_selection': 'eager', 'cache_selected_only': 'False', 'profiles_dir': '/root/.dbt', 'quiet': 'False', 'version_check': 'True', 'use_colors': 'True', 'debug': 'False'}
+[0m22:58:33.393628 [info ] [MainThread]: Creating dbt configuration folder at /root/.dbt
+[0m22:58:33.397338 [debug] [MainThread]: Starter project path: /usr/local/lib/python3.12/site-packages/dbt/include/starter_project
+[0m22:58:33.401409 [info ] [MainThread]: 
+Your new dbt project "retailops_athena" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m22:58:33.401992 [info ] [MainThread]: Setting up your profile.
+[0m23:04:30.280537 [info ] [MainThread]: Profile retailops_athena written to /root/.dbt/profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m23:04:30.282952 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 356.976, "process_in_blocks": "40104", "process_kernel_time": 0.246098, "process_mem_max_rss": "121476", "process_out_blocks": "3312", "process_user_time": 2.132852}
+[0m23:04:30.285027 [debug] [MainThread]: Command `dbt init` succeeded at 23:04:30.284584 after 356.98 seconds
+[0m23:04:30.285911 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fbf546bd0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fbfd2b1d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x732fc045ecc0>]}
+[0m23:04:30.286598 [debug] [MainThread]: Flushing usage events
+[0m23:04:31.090017 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m23:04:43.950547 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0f60e480>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0e261fd0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0e28eba0>]}
+
+
+============================== 23:04:43.956264 | 0ad17265-24e4-4d5c-8cfb-1cea02af1eaa ==============================
+[0m23:04:43.956264 [info ] [MainThread]: Running with dbt=1.11.2
+[0m23:04:43.957032 [debug] [MainThread]: running dbt with arguments {'use_colors': 'True', 'quiet': 'False', 'debug': 'False', 'use_experimental_parser': 'False', 'log_path': 'logs', 'target_path': 'None', 'send_anonymous_usage_stats': 'True', 'indirect_selection': 'eager', 'profiles_dir': '/root/.dbt', 'no_print': 'None', 'log_format': 'default', 'static_parser': 'True', 'version_check': 'True', 'printer_width': '80', 'write_json': 'True', 'invocation_command': 'dbt debug', 'empty': 'None', 'warn_error': 'None', 'log_cache_events': 'False', 'cache_selected_only': 'False', 'introspect': 'True', 'partial_parse': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'fail_fast': 'False'}
+[0m23:04:43.971321 [info ] [MainThread]: dbt version: 1.11.2
+[0m23:04:43.971915 [info ] [MainThread]: python version: 3.12.12
+[0m23:04:43.972509 [info ] [MainThread]: python path: /usr/local/bin/python3.12
+[0m23:04:43.973131 [info ] [MainThread]: os info: Linux-6.14.0-37-generic-x86_64-with-glibc2.41
+[0m23:04:44.317183 [info ] [MainThread]: Using profiles dir at /root/.dbt
+[0m23:04:44.317621 [info ] [MainThread]: Using profiles.yml file at /root/.dbt/profiles.yml
+[0m23:04:44.318076 [info ] [MainThread]: Using dbt_project.yml file at /app/dbt_athena/dbt_project.yml
+[0m23:04:44.318926 [info ] [MainThread]: adapter type: athena
+[0m23:04:44.319405 [info ] [MainThread]: adapter version: 1.8.2
+[0m23:04:44.319916 [info ] [MainThread]: Configuration:
+[0m23:04:44.320374 [info ] [MainThread]:   profiles.yml file [[32mOK found and valid[0m]
+[0m23:04:44.320839 [info ] [MainThread]:   dbt_project.yml file [[31mERROR not found[0m]
+[0m23:04:44.321305 [info ] [MainThread]: Required dependencies:
+[0m23:04:44.321803 [debug] [MainThread]: Executing "git --help"
+[0m23:04:44.322923 [info ] [MainThread]:  - git [[31mERROR[0m]
+
+[0m23:04:44.323404 [info ] [MainThread]: Connection:
+[0m23:04:44.323999 [info ] [MainThread]:   s3_staging_dir: s3://retailops-athena-query-results-eu-west-2/dbt/
+[0m23:04:44.324478 [info ] [MainThread]:   work_group: None
+[0m23:04:44.325013 [info ] [MainThread]:   region_name: eu-west-2
+[0m23:04:44.325579 [info ] [MainThread]:   database: retailops
+[0m23:04:44.326071 [info ] [MainThread]:   schema: staging
+[0m23:04:44.326556 [info ] [MainThread]:   poll_interval: 1.0
+[0m23:04:44.327016 [info ] [MainThread]:   aws_profile_name: None
+[0m23:04:44.327483 [info ] [MainThread]:   aws_access_key_id: None
+[0m23:04:44.327931 [info ] [MainThread]:   endpoint_url: None
+[0m23:04:44.328386 [info ] [MainThread]:   s3_data_dir: s3://retailops-data-lake-eu-west-2/curated/
+[0m23:04:44.328892 [info ] [MainThread]:   s3_data_naming: schema_table_unique
+[0m23:04:44.329494 [info ] [MainThread]:   s3_tmp_table_dir: None
+[0m23:04:44.329997 [info ] [MainThread]:   debug_query_state: False
+[0m23:04:44.330558 [info ] [MainThread]:   seed_s3_upload_args: None
+[0m23:04:44.331148 [info ] [MainThread]:   lf_tags_database: None
+[0m23:04:44.331725 [info ] [MainThread]:   spark_work_group: None
+[0m23:04:44.332469 [info ] [MainThread]: Registered adapter: athena=1.8.2
+[0m23:04:44.468199 [debug] [MainThread]: Acquiring new athena connection 'debug'
+[0m23:04:44.468913 [debug] [MainThread]: Using athena connection "debug"
+[0m23:04:44.469415 [debug] [MainThread]: On debug: select 1 as id
+[0m23:04:44.469878 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m23:05:44.717050 [debug] [MainThread]: dbt.adapters.athena.constants adapter: Error running SQL: select 1 as id
+[0m23:05:44.721407 [debug] [MainThread]: On debug: Close
+[0m23:05:44.724365 [info ] [MainThread]:   Connection test: [[31mERROR[0m]
+
+[0m23:05:44.728225 [info ] [MainThread]: [31m3 checks failed:[0m
+[0m23:05:44.731373 [info ] [MainThread]: Project loading failed for the following reason:
+ project path </app/dbt_athena/dbt_project.yml> not found
+
+[0m23:05:44.734589 [info ] [MainThread]: Error from git --help: Could not find command, ensure it is in the user's PATH: "git"
+
+[0m23:05:44.736971 [info ] [MainThread]: dbt was unable to connect to the specified database.
+The database returned the following error:
+
+  >Runtime Error
+  Unable to locate credentials
+
+Check your database credentials and try again. For more information, visit:
+https://docs.getdbt.com/docs/configure-your-profile
+
+
+[0m23:05:44.740918 [debug] [MainThread]: Resource report: {"command_name": "debug", "command_success": false, "command_wall_clock_time": 60.856663, "process_in_blocks": "38616", "process_kernel_time": 0.34158, "process_mem_max_rss": "131328", "process_out_blocks": "48", "process_user_time": 2.358104}
+[0m23:05:44.742487 [debug] [MainThread]: Command `dbt debug` failed at 23:05:44.741954 after 60.86 seconds
+[0m23:05:44.743773 [debug] [MainThread]: Connection 'debug' was properly closed.
+[0m23:05:44.744634 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0e422480>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0c299850>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b0e0dd38c20>]}
+[0m23:05:44.745401 [debug] [MainThread]: Flushing usage events
+[0m23:05:46.198702 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m23:53:14.505805 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e78c36e0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e6a923c0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e78c14f0>]}
+
+
+============================== 23:53:14.509350 | ff5cd758-82eb-4629-991a-e6b7c3f5a498 ==============================
+[0m23:53:14.509350 [info ] [MainThread]: Running with dbt=1.11.2
+[0m23:53:14.510137 [debug] [MainThread]: running dbt with arguments {'write_json': 'True', 'no_print': 'None', 'partial_parse': 'True', 'log_cache_events': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'indirect_selection': 'eager', 'version_check': 'True', 'warn_error': 'None', 'cache_selected_only': 'False', 'introspect': 'True', 'target_path': 'None', 'use_experimental_parser': 'False', 'printer_width': '80', 'log_format': 'default', 'debug': 'False', 'fail_fast': 'False', 'log_path': 'logs', 'profiles_dir': '/root/.dbt', 'quiet': 'False', 'empty': 'None', 'static_parser': 'True', 'send_anonymous_usage_stats': 'True', 'use_colors': 'True', 'invocation_command': 'dbt debug'}
+[0m23:53:14.521403 [info ] [MainThread]: dbt version: 1.11.2
+[0m23:53:14.522017 [info ] [MainThread]: python version: 3.12.12
+[0m23:53:14.522563 [info ] [MainThread]: python path: /usr/local/bin/python3.12
+[0m23:53:14.523053 [info ] [MainThread]: os info: Linux-6.14.0-37-generic-x86_64-with-glibc2.41
+[0m23:53:14.523549 [info ] [MainThread]: Using profiles dir at /root/.dbt
+[0m23:53:14.523997 [info ] [MainThread]: Using profiles.yml file at /root/.dbt/profiles.yml
+[0m23:53:14.524449 [info ] [MainThread]: Using dbt_project.yml file at /app/dbt_athena/dbt_project.yml
+[0m23:53:14.524910 [info ] [MainThread]: Configuration:
+[0m23:53:14.525362 [info ] [MainThread]:   profiles.yml file [[31mERROR not found[0m]
+[0m23:53:14.525859 [info ] [MainThread]:   dbt_project.yml file [[31mERROR not found[0m]
+[0m23:53:14.526374 [info ] [MainThread]: Required dependencies:
+[0m23:53:14.526971 [debug] [MainThread]: Executing "git --help"
+[0m23:53:14.528469 [info ] [MainThread]:  - git [[31mERROR[0m]
+
+[0m23:53:14.529356 [info ] [MainThread]: Connection test skipped since no profile was found
+[0m23:53:14.530589 [info ] [MainThread]: [31m3 checks failed:[0m
+[0m23:53:14.531217 [info ] [MainThread]: dbt looked for a profiles.yml file in /root/.dbt/profiles.yml, but did
+not find one. For more information on configuring your profile, consult the
+documentation:
+
+https://docs.getdbt.com/docs/configure-your-profile
+
+
+[0m23:53:14.532154 [info ] [MainThread]: Project loading failed for the following reason:
+ project path </app/dbt_athena/dbt_project.yml> not found
+
+[0m23:53:14.533075 [info ] [MainThread]: Error from git --help: Could not find command, ensure it is in the user's PATH: "git"
+
+[0m23:53:14.534812 [debug] [MainThread]: Resource report: {"command_name": "debug", "command_success": false, "command_wall_clock_time": 0.095574625, "process_in_blocks": "0", "process_kernel_time": 0.164822, "process_mem_max_rss": "101656", "process_out_blocks": "8", "process_user_time": 1.755111}
+[0m23:53:14.535680 [debug] [MainThread]: Command `dbt debug` failed at 23:53:14.535489 after 0.10 seconds
+[0m23:53:14.536285 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e7892900>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e68a4710>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7b03e68a46e0>]}
+[0m23:53:14.536999 [debug] [MainThread]: Flushing usage events
+[0m23:53:15.241288 [debug] [MainThread]: An error was encountered while trying to flush usage events

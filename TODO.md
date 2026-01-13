@@ -133,6 +133,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
 ### Week 3: Cloud dbt / orchestration / ML
 
 - [] dbt Project Setup
+    - add athena adapter to requierments
+    - Create new dbt project for Athena
 
 
 
