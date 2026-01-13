@@ -24,7 +24,7 @@ cleaned as(
             when cast(on_time_rate as decimal(5,3)) >= 0.75 then 'Fair'
             else 'Poor'
         end as on_time_performance_tier,
-
+        localtimestamp as dbt_loaded_at
 
     from source
 )

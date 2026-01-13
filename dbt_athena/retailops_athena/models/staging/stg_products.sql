@@ -22,13 +22,14 @@ cleaned as (
 
         supplier_id,
 
+
         cast(
-            (case 
-                when lower(is_active) in ('true','t','1','yes') then true
-                else false
-            end) as boolean
+        case
+            when lower(cast(is_active as varchar)) in ('true','t','1','yes') then true
+            else false
+        end as boolean
         ) as is_active,
-        current_timestamp as dbt_loaded_at
+        localtimestamp as dbt_loaded_at
 
     
     from source

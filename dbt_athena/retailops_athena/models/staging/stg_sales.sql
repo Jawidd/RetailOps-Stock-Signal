@@ -31,7 +31,7 @@ cleaned as(
             when extract(day_of_week from cast(sale_date as date)) in (6, 7) then true
             else false
         end as is_weekend,
-        current_timestamp as dbt_loaded_at
+        localtimestamp as dbt_loaded_at
 
     from source
     where sale_date is not null

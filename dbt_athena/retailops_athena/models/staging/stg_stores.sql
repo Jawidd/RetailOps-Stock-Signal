@@ -21,7 +21,7 @@ cleaned as (
             else 'Unknown'
         end as store_size_category,
         date_diff('year', cast(opened_date as date), current_date) as store_age_years,
-        current_timestamp as dbt_loaded_at
+        localtimestamp as dbt_loaded_at
     from source
 ) 
 

@@ -40,6 +40,7 @@ cleaned as (
             when date_diff('day', cast(last_restock_date as date), cast(snapshot_date as date)) > 60 then true
             else false
         end as is_slow_moving,
+        localtimestamp as dbt_loaded_at
 
     from source
     where snapshot_date is not null
