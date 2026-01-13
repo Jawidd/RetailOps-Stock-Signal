@@ -31,6 +31,26 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   retailops_athena:
-    # Config indicated by + and applies to all files under models/example/
-    example:
+    staging:
       +materialized: view
+      +database: retailops
+      +schema: staging
+      +tags: ['staging']
+    
+    intermediate:
+      +materialized: view
+      +database: retailops
+      +schema: intermediate
+      +tags: ['intermediate']
+    
+    marts:
+      +materialized: table
+      +database: retailops
+      +schema: marts
+      +file_format: parquet  # Athena optimization
+      +write_compression: snappy
+      +tags: ['marts']
+
+vars:
+  # Business logic variables
+  current_date: '2025-01-12'

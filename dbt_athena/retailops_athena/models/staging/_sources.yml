@@ -1,0 +1,112 @@
+version: 2
+
+sources:
+  - name: raw_retailops
+    description: "Raw retail operations data from S3, cataloged in AWS Glue"
+    database: retailops
+    schema: retailops  # Glue database name
+    
+    tables:
+
+      - name: raw_products
+        description: "Product master data including pricing and supplier relationships"
+        columns:
+          - name: product_id
+            description: "Unique product identifier"
+            tests:
+              - not_null
+              - unique
+          - name: supplier_id
+            description: "Foreign key to suppliers"
+          - name: is_active
+            description: "Whether product is currently available for sale"
+            tests:
+              - accepted_values:
+                  values: ['true', 'false', 'True', 'False']
+      
+      - name: raw_stores
+        description: "Store location and attributes"
+        columns:
+          - name: store_id
+            description: "Unique store identifier"
+            tests:
+              - not_null
+              - unique
+          - name: region
+            description: "Geographic region (North, South, East, West)"
+          - name: store_type
+            description: "Store format (Superstore, Standard, Express)"
+      
+      - name: raw_suppliers
+        description: "Supplier master data with performance metrics"
+        columns:
+          - name: supplier_id
+            description: "Unique supplier identifier"
+            tests:
+              - not_null
+              - unique
+          - name: on_time_rate
+            description: "Percentage of shipments delivered on time"
+            tests:
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 1
+      
+
+      - name: raw_sales
+        description: "Daily sales transactions, partitioned by date"
+        meta:
+          partition_by: dt
+        columns:
+          - name: sale_id
+            description: "Unique transaction identifier"
+            tests:
+              - not_null
+              - unique
+          - name: sale_date
+            description: "Date of transaction"
+            tests:
+              - not_null
+          - name: store_id
+            tests:
+              - not_null
+          - name: product_id
+            tests:
+              - not_null
+          - name: quantity_sold
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+          - name: total_amount
+            description: "Total transaction amount after discounts"
+            tests:
+              - not_null
+      
+      - name: raw_inventory
+        description: "Daily inventory snapshots, partitioned by date"
+        meta:
+          partition_by: dt
+        columns:
+          - name: snapshot_date
+            tests:
+              - not_null
+          - name: store_id
+            tests:
+              - not_null
+          - name: product_id
+            tests:
+              - not_null
+      
+      - name: raw_shipments
+        description: "Supplier shipment tracking, partitioned by date"
+        meta:
+          partition_by: dt
+        columns:
+          - name: shipment_id
+            tests:
+              - not_null
+              - unique
+          - name: supplier_id
+            tests:
+              - not_null
