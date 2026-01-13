@@ -3,7 +3,9 @@
 }}
 
 
-with source as(),
+with source as(
+        select * from {{ source('raw_retailops','raw_sales') }}
+),
 cleaned as(
     select
         sale_id,
