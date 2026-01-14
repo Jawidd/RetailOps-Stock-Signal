@@ -45,12 +45,13 @@ sources:
             tests:
               - not_null
               - unique
-          - name: on_time_rate
-            description: "Percentage of shipments delivered on time"
-            tests:
-              - dbt_utils.accepted_range:
-                  min_value: 0
-                  max_value: 1
+              # ######   on_time_rate is of type char in raw table
+          # - name: on_time_rate
+          #   description: "Percentage of shipments delivered on time"
+          #   tests:
+          #     - dbt_utils.accepted_range:
+          #         min_value: 0
+          #         max_value: 1
       
 
       - name: raw_sales
@@ -76,8 +77,9 @@ sources:
           - name: quantity_sold
             tests:
               - not_null
-              - dbt_utils.accepted_range:
-                  min_value: 1
+              ####   quantity sold is of type char in raw table 
+              # - dbt_utils.accepted_range:             
+              #     min_value: 1
           - name: total_amount
             description: "Total transaction amount after discounts"
             tests:

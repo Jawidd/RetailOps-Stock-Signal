@@ -10,7 +10,7 @@ cleaned as (
     select
         store_id,
         store_name,
-        region,
+        coalesce(nullif(trim(region), ''), 'Unknown') as region,
         store_type,
         cast(sq_footage as int) as square_footage,
         cast(opened_date as date) as opened_date,

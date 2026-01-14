@@ -12,16 +12,17 @@ models:
       - name: unit_gross_margin
         description: "Profit per unit (price - cost)"
         tests:
-          - dbt_utils.expression_is_true:
+          - dbt_utils.accepted_range:
               arguments:
-                expression: "unit_gross_margin >= 0"
+                min_value: 0
+
       - name: supplier_id
         description: "Foreign key to suppliers"
         tests:
           - relationships:
               arguments:
                 to: ref('stg_suppliers')
-                field: product_id
+                field: supplier_id
 
 
   - name: stg_stores

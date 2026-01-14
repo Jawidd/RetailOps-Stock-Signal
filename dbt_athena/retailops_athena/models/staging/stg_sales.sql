@@ -37,6 +37,7 @@ cleaned as(
     where sale_date is not null
       and store_id is not null
       and product_id is not null
-      and quantity_sold > 0
+      and try_cast(quantity_sold as integer) > 0
+
 )
 select * from cleaned
