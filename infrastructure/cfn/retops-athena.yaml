@@ -5,6 +5,7 @@ Description: >-
   Athena Workgroup (query result location, encryption ...)
   Bucket for athena results
   IAM permissions (for Athena/Glue/S3 access)
+  NOTE: all datatypes are string to avoid CSV parsing
 
 
 Parameters:
@@ -90,14 +91,16 @@ Resources:
               Type: string
             - Name: category
               Type: string
+            - Name: sub_category
+              Type: string
             - Name: unit_cost
-              Type: decimal(10,2)
+              Type: string
             - Name: unit_price
-              Type: decimal(10,2)
+              Type: string
             - Name: supplier_id
               Type: string
             - Name: is_active
-              Type: boolean
+              Type: string
 
   # RAW Stores Table/Dimension
   RawStoresTable:
@@ -134,9 +137,9 @@ Resources:
               - Name: store_type
                 Type: string
               - Name: sq_footage
-                Type: int
+                Type: string
               - Name: opened_date
-                Type: date
+                Type: string 
 
   # RAW Suppliers Table/Dimension
   RawSuppliersTable:
@@ -169,9 +172,9 @@ Resources:
             - Name: supplier_name
               Type: string
             - Name: lead_time_days
-              Type: int
+              Type: string  
             - Name: on_time_rate
-              Type: decimal(5,3)
+              Type: string
             - Name: country
               Type: string
 
@@ -192,6 +195,10 @@ Resources:
           projection.dt.type: "date"
           projection.dt.range: "2024-07-01,NOW"
           projection.dt.format: "yyyy-MM-dd"
+          storage.location.template: !Join
+            - ""
+            - - !ImportValue retailops-DataLakeBucketURI
+              - "/raw/sales/dt=${dt}/"
         PartitionKeys:
           - Name: dt
             Type: string
@@ -211,19 +218,19 @@ Resources:
             - Name: sale_id
               Type: string
             - Name: sale_date
-              Type: date
+              Type: string
             - Name: store_id
               Type: string
             - Name: product_id
               Type: string
             - Name: quantity_sold
-              Type: int
+              Type: string
             - Name: unit_price
-              Type: decimal(10,2)
+              Type: string
             - Name: discount_amount
-              Type: decimal(10,2)
+              Type: string
             - Name: total_amount
-              Type: decimal(10,2)
+              Type: string
 
     # RAW Inventory  Facts
   RawInventoryTable:
@@ -242,6 +249,10 @@ Resources:
           projection.dt.type: "date"
           projection.dt.range: "2024-07-01,NOW"
           projection.dt.format: "yyyy-MM-dd"
+          storage.location.template: !Join
+            - ""
+            - - !ImportValue retailops-DataLakeBucketURI
+              - "/raw/inventory/dt=${dt}/"
         PartitionKeys:
           - Name: dt
             Type: string
@@ -259,19 +270,19 @@ Resources:
               escapeChar: "\\"
           Columns:
             - Name: snapshot_date
-              Type: date
+              Type: string
             - Name: store_id
               Type: string
             - Name: product_id
               Type: string
             - Name: quantity_on_hand
-              Type: int
+              Type: string
             - Name: quantity_on_order
-              Type: int
+              Type: string
             - Name: reorder_point
-              Type: int
+              Type: string
             - Name: last_restock_date
-              Type: date
+              Type: string
 
   # RAW Shipment Facts
   RawShipmentsTable:
@@ -290,6 +301,10 @@ Resources:
           projection.dt.type: "date"
           projection.dt.range: "2024-07-01,NOW"
           projection.dt.format: "yyyy-MM-dd"
+          storage.location.template: !Join
+            - ""
+            - - !ImportValue retailops-DataLakeBucketURI
+              - "/raw/shipments/dt=${dt}/"
         PartitionKeys:
           - Name: dt
             Type: string
@@ -309,11 +324,11 @@ Resources:
             - Name: shipment_id
               Type: string
             - Name: order_date
-              Type: date
+              Type: string
             - Name: expected_date
-              Type: date
+              Type: string
             - Name: received_date
-              Type: date
+              Type: string
             - Name: store_id
               Type: string
             - Name: product_id
@@ -321,11 +336,11 @@ Resources:
             - Name: supplier_id
               Type: string
             - Name: quantity_ordered
-              Type: int
+              Type: string
             - Name: quantity_received
-              Type: int
+              Type: string
             - Name: is_late
-              Type: boolean
+              Type: string
 
 
 
