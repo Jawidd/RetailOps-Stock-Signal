@@ -132,14 +132,23 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 ### Week 3: Cloud dbt / orchestration / ML
 
-- [] dbt Project Setup
+- [X] dbt Project Setup
     - add athena adapter to requierments
     - Create new dbt project for Athena
-    - add stage for all raw tables then 
+    
+- [X] add stq sql query for all raw tables  
+    - add tests for raw tables / save test results to output
+    - add tests for stg tables
+   
+- [X] debug,run,test dbt
     - dbt debug / dbt deps / dbt parse 
     - dbt run --select staging         <!-- SUCCESS -->
     - dbt test --select source:raw_retailops 2>&1 | tee raw_source_tests_$(date +%Y%m%d_%H%M%S).txt 
     - dbt test --select staging        <!-- SUCCESS -->
+    - deduplicate duplicated shipments_ids ((add deduplication in stg_shipments))
+
+- [] add marts and dims
+    - add dim_date and dim_producs
 
 
 

@@ -40,11 +40,11 @@ models:
     #   +schema: intermediate
 
     
-    # marts:
-    #   +materialized: table
-    #   +schema: marts
-    #   +file_format: parquet  # Athena optimization
-    #   +write_compression: snappy
+    marts:
+      +materialized: table
+      +schema: marts
+      +file_format: parquet  # Athena optimization
+      +write_compression: snappy
 
 
 vars:
