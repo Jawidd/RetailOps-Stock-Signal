@@ -14,8 +14,8 @@ cleaned as (
         product_id,
         product_name,
         category,
-        cast(unit_cost as decimal(10,2)) as unit_cost,
-        cast(unit_price as decimal(10,2)) as unit_price,
+        try_cast(nullif(trim(unit_cost), '') as decimal(10,2)) as unit_cost,
+        try_cast(nullif(trim(unit_price), '') as decimal(10,2)) as unit_price,
         cast(unit_price as decimal(10,2)) - cast(unit_cost as decimal(10,2)) as unit_gross_margin,
         (cast(unit_price as decimal(10,2)) - cast(unit_cost as decimal(10,2)))
             / nullif(cast(unit_price as decimal(10,2)), 0) as unit_margin_pct,

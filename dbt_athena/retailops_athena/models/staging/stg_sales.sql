@@ -13,14 +13,20 @@ cleaned as(
         store_id,
         product_id,
 
-
-        cast(quantity_sold as int) as quantity_sold,
-        cast(unit_price as decimal(10,2)) as unit_price,
-        cast(discount_amount as decimal(10,2)) as discount_amount,
-        cast(total_amount as decimal(10,2)) as total_amount,
-
-        cast(discount_amount as decimal(10,2)) / 
-            (cast(total_amount as decimal(10,2)) + cast(discount_amount as decimal(10,2))) as discount_rate,
+        try_cast(nullif(trim(quantity_sold), '') as integer) as quantity_sold,
+        try_cast(nullif(trim(unit_price), '') as decimal(10,2)) as unit_price,
+        try_cast(nullif(trim(discount_amount), '') as decimal(10,2)) as discount_amount,
+        try_cast(nullif(trim(total_amount), '') as decimal(10,2)) as total_amount,
+        
+        coalesce(
+        try_cast(nullif(trim(discount_amount), '') as decimal(10,2)),
+        0
+        ) /
+        nullif(
+        coalesce(try_cast(nullif(trim(total_amount), '') as decimal(10,2)), 0)
+        + coalesce(try_cast(nullif(trim(discount_amount), '') as decimal(10,2)), 0),
+        0
+        ) as discount_rate,
 
         extract(year from cast(sale_date as date)) as sale_year,
         extract(month from cast(sale_date as date)) as sale_month,
