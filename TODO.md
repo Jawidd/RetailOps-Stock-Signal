@@ -150,6 +150,7 @@ This project will show I can build an end-to-end data workflow (and later add ML
 - [] add marts and dims
     - add dim_date and dim_producs + tests
     - add fct_daily_sales
+    - add fix(dbt-athena) fix issues leading to failure of dbt run fct_inventory_snapshots
 
 
 

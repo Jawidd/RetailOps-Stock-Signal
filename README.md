@@ -5,10 +5,10 @@ Work in progress: building a retail analytics platform with a local Postgres + d
 
 ## Current status
 
-* Week 1 Completed — Local analytics stack (Favorita + Postgres + dbt + Metabase + R checks) 
-* Week 2 Completed— Synthetic data + AWS data lake  Implemented 
-* Week 3 In Progress— dbt transformation layer  
-* Week 4 Planned— Orchestration + monitoring  
+* [X] Week 1  — Local analytics stack (Favorita + Postgres + dbt + Metabase + R checks) 
+* [X] Week 2           Synthetic data + AWS data lake  Implemented 
+* [X] Week 3           dbt transformation layer (Athena / Glue-backed models + tests)
+* [ ]Week 3 Part II - Planned— Orchestration + monitoring  
 * Week 5 Planned— Analytics + BI layer  
 * Week 6 Planned— ML (demand forecasting)  
 
@@ -34,23 +34,19 @@ Planned
 
 ## Repo At A Glance
 
-* `docker-compose.yml` — Postgres + Metabase
-* `Dockerfile`
 * `requirements.txt`
-* `scripts/week01-load__favorita_csv_to_postgres.py` — load raw CSVs into Postgres
-* `experiments/favorita-dbt-postgresql/dbt/models/staging/stg_*.sql` — staging models
-* `experiments/favorita-dbt-postgresql/dbt/models/marts/mart_store_daily_sales.sql` — first mart table
-* `infrastructure/cfn/retops-*.yaml` — CloudFormation templates (S3 / Glue / Athena / IAM)
-* `infrastructure/deploy-all-cfn-stacks.sh` — deploy helper
+* `data/synthetic/` raw_data
+* `dbt_athena/retailops_athena/models/` stage,dimensions,fact and mart queries
+* `infrastructure/cfn/` CloudFormation
+* `scripts/`
+
 
 ## Current Architecture (WIP)
 
 - S3 data lake 
 - Glue Data Catalog + Athena: templates for serverless queryingtemplate that is still focused on S3 while Athena/Glue permissions are being finalized.
 
-## How to run locally (WIP)
 
-TODO
 
 ## Week 1 — Local analytics stack (Favorita + Postgres + dbt + Metabase & R )
 
