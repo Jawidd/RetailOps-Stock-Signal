@@ -14,32 +14,33 @@ cleaned as (
         store_id,
         product_id,
 
-        cast(quantity_on_hand as int) as quantity_on_hand,
-        cast(quantity_on_order as int) as quantity_on_order,
-        cast(reorder_point as int) as reorder_point,
-        cast(last_restock_date as date) as last_restock_date,
+        try_cast(nullif(trim(quantity_on_hand), '') as integer) as quantity_on_hand,
+        try_cast(nullif(trim(quantity_on_order), '') as integer) as quantity_on_order,
+        try_cast(nullif(trim(reorder_point), '') as integer) as reorder_point,
+        try_cast(nullif(nullif(trim(last_restock_date), ''), '.') as date) as last_restock_date,
         
 
-        cast(quantity_on_hand as int) + cast(quantity_on_order as int) as total_available_quantity,
+        coalesce(try_cast(nullif(trim(quantity_on_hand), '') as integer), 0)
+          + coalesce(try_cast(nullif(trim(quantity_on_order), '') as integer), 0) as total_available_quantity,
         
 
-        date_diff('day', cast(last_restock_date as date), cast(snapshot_date as date)) as days_since_restock,
-        
+        date_diff(
+          'day',
+          try_cast(nullif(nullif(trim(last_restock_date), ''), '.') as date),
+          try_cast(nullif(nullif(trim(snapshot_date), ''), '.') as date)
+        ) as days_since_restock,
 
-        case
-            when cast(quantity_on_hand as int) = 0 then true
-            else false
-        end as is_out_of_stock,
+        case when coalesce(try_cast(nullif(trim(quantity_on_hand), '') as integer), 0) = 0 then true else false end as is_out_of_stock,
+        case when coalesce(try_cast(nullif(trim(quantity_on_hand), '') as integer), 0)
+                  <= coalesce(try_cast(nullif(trim(reorder_point), '') as integer), 0)
+             then true else false end as needs_reorder,
         
-        case
-            when cast(quantity_on_hand as int) <= cast(reorder_point as int) then true
-            else false
-        end as needs_reorder,
-        
-        case
-            when date_diff('day', cast(last_restock_date as date), cast(snapshot_date as date)) > 60 then true
-            else false
-        end as is_slow_moving,
+        case when date_diff(
+                  'day',
+                  try_cast(nullif(nullif(trim(last_restock_date), ''), '.') as date),
+                  try_cast(nullif(nullif(trim(snapshot_date), ''), '.') as date)
+             ) > 60 then true else false end as is_slow_moving,
+        dt as partition_date,     
         localtimestamp as dbt_loaded_at
 
     from source
