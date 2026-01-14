@@ -56,6 +56,44 @@ cleaned as (
     from source
     where shipment_id is not null
       and order_date is not null
+),
+
+deduped as (
+    select *
+    from (
+        select
+            c.*,
+            row_number() over (
+                partition by shipment_id
+                order by
+                    received_date desc nulls last,
+                    expected_date desc nulls last,
+                    order_date desc nulls last,
+                    quantity_received desc nulls last
+            ) as rn
+        from cleaned c
+    ) x
+    where rn = 1
 )
 
-select * from cleaned
+select
+    -- return all columns but rn
+    shipment_id,
+    order_date,
+    expected_date,
+    received_date,
+    store_id,
+    product_id,
+    supplier_id,
+    quantity_ordered,
+    quantity_received,
+    actual_lead_time_days,
+    expected_lead_time_days,
+    days_late,
+    quantity_variance,
+    fill_rate,
+    is_late,
+    is_delayed,
+    is_partial_shipment,
+    dbt_loaded_at
+from deduped
