@@ -148,7 +148,8 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - deduplicate duplicated shipments_ids ((add deduplication in stg_shipments))
 
 - [] add marts and dims
-    - add dim_date and dim_producs
+    - add dim_date and dim_producs + tests
+    - add fct_daily_sales
 
 
 

@@ -1,0 +1,23 @@
+models:
+  - name: dim_date
+    description: "Date dimension with calendar + fiscal attributes"
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+
+  - name: dim_products
+    description: "Product dimension denormalized with supplier attributes"
+    columns:
+      - name: product_id
+        tests: [not_null, unique]
+      - name: supplier_id
+        tests:
+          - relationships:
+              to: ref('stg_suppliers')
+              field: supplier_id
+      - name: unit_gross_margin
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              config:
+                severity: warn
