@@ -147,11 +147,14 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - dbt test --select staging        <!-- SUCCESS -->
     - deduplicate duplicated shipments_ids ((add deduplication in stg_shipments))
 
-- [] add marts and dims
+- [X] add marts and dims
     - add dim_date and dim_producs + tests
     - add fct_daily_sales
     - add fix(dbt-athena) fix issues leading to failure of dbt run fct_inventory_snapshots
 
+- [] setup lambda generator 
+    - add lambda py code 
+    - 
 
 
 
