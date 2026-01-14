@@ -1,3 +1,5 @@
+version: 2
+
 models:
   - name: dim_date
     description: "Date dimension with calendar + fiscal attributes"
@@ -19,5 +21,66 @@ models:
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
+              config:
+                severity: warn
+
+  - name: fct_daily_sales
+    description: "Daily sales at store-product-day grain"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [sale_date, store_id, product_id]
+    columns:
+      - name: store_id
+        tests:
+          - relationships:
+              to: ref('dim_stores')
+              field: store_id
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      - name: total_net_amount
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              config:
+                severity: warn
+      - name: total_profit
+        tests:
+          - not_null
+
+  - name: fct_inventory_snapshots
+    description: "Inventory snapshots at store-product-day grain"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [snapshot_date, store_id, product_id]
+    columns:
+      - name: store_id
+        tests:
+          - relationships:
+              to: ref('dim_stores')
+              field: store_id
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      - name: inventory_value_at_cost_clipped
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: mart_supplier_performance
+    description: "Supplier KPIs aggregated from shipment outcomes"
+    columns:
+      - name: supplier_id
+        tests: [not_null, unique]
+      - name: calculated_on_time_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
               config:
                 severity: warn
