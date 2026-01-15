@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - ECR repo + IAM role for Data Generator Lambda (container image)
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: "retailops"
+
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  DataGeneratorRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${ProjectNameInput}-${Env}-data-generator"
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
+
+  DataGeneratorLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-${Env}-data-generator-lambda-role"
+      Path: !Sub "/retailops/${Env}/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: !Sub "${ProjectNameInput}-${Env}-data-generator-s3"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ListBucket
+                Effect: Allow
+                Action: [ "s3:ListBucket", "s3:GetBucketLocation" ]
+                Resource: !ImportValue retailops-DataLakeBucketARN
+              - Sid: RWObjects
+                Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue retailops-DataLakeBucketARN
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
+
+Outputs:
+  DataGeneratorRepoUri:
+    Description: ECR repository URI
+    Value: !GetAtt DataGeneratorRepo.RepositoryUri
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorRepoUri"
+
+  DataGeneratorImageUri:
+    Description: ECR image URI (repo:latest)
+    Value: !Sub "${DataGeneratorRepo.RepositoryUri}:latest"
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorImageUri"
+
+  DataGeneratorLambdaRoleArn:
+    Description: IAM role ARN for Lambda
+    Value: !GetAtt DataGeneratorLambdaRole.Arn
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaRoleArn"

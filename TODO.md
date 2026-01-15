@@ -152,9 +152,12 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - add fct_daily_sales
     - add fix(dbt-athena) fix issues leading to failure of dbt run fct_inventory_snapshots
 
-- [] setup lambda generator 
+- [X] setup lambda(for generating new data everyday)
+    - create lambda_ecr_repo cfn
     - add new lambda method to use the current generator to generate data for each day similar to real world senario of reciveing/importing new data everyday
-    - 
+    - create dockerfile for lambda
+    - build and push image to lambda_ecr_repo with lambda code included
+    - create cfn for lambda_method
 
 
 

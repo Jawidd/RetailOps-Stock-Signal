@@ -5,7 +5,7 @@ Generates realistic retail sales, inventory, and supply chain data
 for the RetailOps Companion project.
 
 Usage:
-    python generate_synthetic_data.py --days 180 --output ../data/synthetic/
+    python generator.py --days 180 --output ../data/synthetic/
 """
 
 import pandas as pd

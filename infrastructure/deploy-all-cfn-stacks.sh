@@ -14,11 +14,13 @@ echo "Region: $REGION"
 
 # LIST OF STACKS TO  DEPLOY/UPDATE 
 # The order is important as iamstacj import values from both stacks(s3datalake,athena)
+# lambda stack depends on ecr stack
 STACK_FILES=(
   "retops-s3datalake.yaml" 
   "retops-athena.yaml"
   "retops-iam.yaml"
-
+ "retops-ecr-data-generator.yaml"
+ "retops-lambda-data-generator.yaml"
 )
 
 
@@ -26,7 +28,7 @@ for file in "${STACK_FILES[@]}"; do
   template="$TEMPLATE_DIR/$file"
   stack_name=$(basename "$file" .yaml)
 
-  echo "Deploying stack:           $stack_name"
+  echo "Deploying stack:                                   ---------->     $stack_name"
 
   aws cloudformation deploy \
     --stack-name "$stack_name" \

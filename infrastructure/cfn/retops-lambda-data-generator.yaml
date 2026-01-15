@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - Data Generator Lambda (container image) using exported ImageUri
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: "retailops"
+
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  DataGeneratorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectNameInput}-${Env}-data-generator"
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !ImportValue
+        Fn::Sub: "${ProjectNameInput}-${Env}-DataGeneratorLambdaRoleArn"
+      Code:
+        ImageUri: !ImportValue
+          Fn::Sub: "${ProjectNameInput}-${Env}-DataGeneratorImageUri"
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          S3_BUCKET: !ImportValue retailops-DataLakeBucketName
+          PRODUCTS_KEY: "raw/products/products.csv"
+          STORES_KEY: "raw/stores/stores.csv"
+          SUPPLIERS_KEY: "raw/suppliers/suppliers.csv"
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
+
+Outputs:
+  DataGeneratorLambdaArn:
+    Value: !GetAtt DataGeneratorLambda.Arn
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaArn"
+
+  DataGeneratorLambdaName:
+    Value: !Ref DataGeneratorLambda
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaName"
