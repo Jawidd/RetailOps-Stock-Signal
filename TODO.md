@@ -162,8 +162,9 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - test LAMBDA  <!-- SUCCESS -->
 
 - []  
-    - create a ecs DbtCluster, DbtTaskDefinition
-    - upload dbt project zip to s3 ---> 
+    - create and deploy a cfn for ecs DbtCluster, DbtTaskDefinition
+    - upload dbt project zip to s3 using upload script
+     
     
 
 

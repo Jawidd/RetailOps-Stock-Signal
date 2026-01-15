@@ -1,49 +1,76 @@
 #!/usr/bin/env bash
-
-# This script zips  dbt_athena folder and uploads it to 
-# RetailOps S3 data lake(s3bucket:metadata/dbt/dbt_athena.zip)
-# so ECS/Fargate can run dbt from it.
-
 set -euo pipefail
 
 REGION="eu-west-2"
 PROJECT_NAME="retailops"
-ENV="dev"
 
-# Paths
-DBT_DIR="dbt_athena"
-ZIP_OUT="/tmp/dbt_athena.zip"
+# Script is run from ./scripts, so dbt is one level up
+DBT_DIR="../dbt_athena"
+DBT_PROJECT_FILE="${DBT_DIR}/retailops_athena/dbt_project.yml"
+
+# Where to upload in S3
 S3_KEY="metadata/dbt/dbt_athena.zip"
 
-# Resolve bucket from CloudFormation exports (matches your style)
+# Local zip output (keep it inside the repo, predictable)
+ZIP_DIR="${DBT_DIR}/tmp"
+ZIP_OUT="${ZIP_DIR}/dbt_athena.zip"
+
+# CloudFormation export name for Data Lake S3 bucket
+DATALAKE_BUCKET_EXPORT="${PROJECT_NAME}-DataLakeBucketName"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "RetailOps: Upload dbt project to S3"
+
+# 1) Validate local paths
+if [[ ! -d "$DBT_DIR" ]]; then
+  echo "ERROR: dbt directory not found: $DBT_DIR"
+  echo "Run from repo root or update DBT_DIR in this script."
+  exit 1
+fi
+
+if [[ ! -f "$DBT_PROJECT_FILE" ]]; then
+  echo "ERROR: dbt_project.yml not found:"
+  echo "  $DBT_PROJECT_FILE"
+  echo "Expected layout: ../dbt_athena/retailops_athena/dbt_project.yml"
+  exit 1
+fi
+
+# 2) Resolve S3 bucket from CloudFormation exports
+echo "Resolving Data Lake bucket from CloudFormation export:"
+echo "  ExportName: $DATALAKE_BUCKET_EXPORT"
+
 BUCKET_NAME="$(aws cloudformation list-exports --region "$REGION" \
-  --query "Exports[?Name=='${PROJECT_NAME}-DataLakeBucketName'].Value" --output text)"
+  --query "Exports[?Name=='${DATALAKE_BUCKET_EXPORT}'].Value" --output text)"
 
 if [[ -z "$BUCKET_NAME" || "$BUCKET_NAME" == "None" ]]; then
-  echo "ERROR: Could not find export ${PROJECT_NAME}-DataLakeBucketName in region ${REGION}."
-  echo "Deploy your S3 data lake stack first (retops-s3datalake)."
+  echo "ERROR: Could not resolve bucket from export: $DATALAKE_BUCKET_EXPORT"
+  echo "Make sure your Week 2 S3 stack is deployed in $REGION."
   exit 1
 fi
 
-if [[ ! -d "$DBT_DIR" ]]; then
-  echo "ERROR: dbt directory not found: ${DBT_DIR}"
-  echo "Run from repo root where ${DBT_DIR}/ exists."
-  exit 1
-fi
+echo "Bucket: $BUCKET_NAME"
+echo ""
 
-echo "Packaging dbt project: ${DBT_DIR}/ -> ${ZIP_OUT}"
+# 3) Create zip (exclude build artifacts)
+echo "Creating zip: $ZIP_OUT"
+mkdir -p "$ZIP_DIR"
 rm -f "$ZIP_OUT"
 
-# Create zip (exclude common junk)
 zip -r "$ZIP_OUT" "$DBT_DIR" \
   -x "*.DS_Store" \
   -x "__MACOSX/*" \
-  -x "${DBT_DIR}/target/*" \
-  -x "${DBT_DIR}/dbt_packages/*" \
-  -x "${DBT_DIR}/logs/*" >/dev/null
+  -x "*/target/*" \
+  -x "*/dbt_packages/*" \
+  -x "*/logs/*" >/dev/null
 
-echo "Uploading to s3://${BUCKET_NAME}/${S3_KEY}"
+echo "Zip created: $ZIP_OUT - Zip size: $(du -h "$ZIP_OUT" | cut -f1)"
+
+
+
+# 4) Upload to S3
+echo "Uploading to S3 ---> s3://${BUCKET_NAME}/${S3_KEY}"
+
 aws s3 cp "$ZIP_OUT" "s3://${BUCKET_NAME}/${S3_KEY}" --region "$REGION"
 
-echo "Uploaded ✅"
-echo "S3 URI: s3://${BUCKET_NAME}/${S3_KEY}"
+
+echo "Upload complete S3 URI: s3://${BUCKET_NAME}/${S3_KEY}"
