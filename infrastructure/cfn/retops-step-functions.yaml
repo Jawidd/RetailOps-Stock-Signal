@@ -1,10 +1,22 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: RetailOps - Step 2: SNS + basic Step Functions (Pass)
+Description: RetailOps - Step 4: SNS + Step Functions + Lambda + ECS dbt (Fargate)
 
 Parameters:
   ProjectNameInput:
     Type: String
     Default: retailops
+
+  SubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-0102629bea446df37
+
+  SubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-02104ad72813ea4fd
+
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: sg-06157c5d80a25050e
 
 Resources:
   PipelineSuccessTopic:
@@ -28,29 +40,41 @@ Resources:
             Principal: { Service: states.amazonaws.com }
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: OrchestrateLambdaAndSns
+        - PolicyName: OrchestrateLambdaEcsAndSns
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # SNS publish
               - Effect: Allow
                 Action: [ "sns:Publish" ]
                 Resource:
                   - !Ref PipelineSuccessTopic
                   - !Ref PipelineFailureTopic
+
+              # Invoke data generator lambda
               - Effect: Allow
                 Action: [ "lambda:InvokeFunction" ]
                 Resource: !ImportValue retailops-DataGeneratorLambdaArn
 
+              # Run ECS task (dbt)
+              - Effect: Allow
+                Action: [ "ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks" ]
+                Resource: "*"
+
+              # Allow Step Functions to pass roles to ECS
+              - Effect: Allow
+                Action: [ "iam:PassRole" ]
+                Resource: "*"
 
   RetailOpsStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
       StateMachineName: !Sub "${ProjectNameInput}-daily-pipeline"
       RoleArn: !GetAtt StepFunctionsRole.Arn
-       DefinitionString: !Sub
+      DefinitionString: !Sub
         - |
           {
-            "Comment": "RetailOps pipeline (v3): Lambda generate",
+            "Comment": "RetailOps pipeline (v4): Lambda -> ECS dbt",
             "StartAt": "GenerateData",
             "States": {
               "GenerateData": {
@@ -60,40 +84,70 @@ Resources:
                   "FunctionName": "${DataGenArn}",
                   "Payload": { "date.$": "$.date" }
                 },
+                "ResultPath": "$.dataGen",
+                "Next": "RunDbt",
+                "Catch": [
+                  { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
+                ]
+              },
+
+              "RunDbt": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::ecs:runTask.sync",
+                "Parameters": {
+                  "Cluster": "${DbtClusterArn}",
+                  "TaskDefinition": "${DbtTaskArn}",
+                  "LaunchType": "FARGATE",
+                  "NetworkConfiguration": {
+                    "AwsvpcConfiguration": {
+                      "Subnets": ["${SubnetA}", "${SubnetB}"],
+                      "SecurityGroups": ["${SecurityGroupId}"],
+                      "AssignPublicIp": "ENABLED"
+                    }
+                  }
+                },
+                "ResultPath": "$.dbt",
                 "Next": "NotifySuccess",
                 "Catch": [
                   { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
                 ]
               },
+
               "NotifySuccess": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::sns:publish",
                 "Parameters": {
                   "TopicArn": "${SuccessTopic}",
                   "Subject": "RetailOps Pipeline Success",
-                  "Message.$": "States.Format('OK (Lambda). date={}', $.date)"
+                  "Message.$": "States.Format('OK (Lambda + dbt). date={}', $.date)"
                 },
                 "End": true
               },
+
               "NotifyFailure": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::sns:publish",
                 "Parameters": {
                   "TopicArn": "${FailureTopic}",
                   "Subject": "RetailOps Pipeline FAILED",
-                  "Message.$": "States.Format('FAILED (Lambda). error={}', $.error)"
+                  "Message.$": "States.Format('FAILED. error={}', $.error)"
                 },
                 "Next": "FailState"
               },
+
               "FailState": { "Type": "Fail" }
             }
           }
         - {
             DataGenArn: !ImportValue retailops-DataGeneratorLambdaArn,
+            DbtClusterArn: !ImportValue retailops-DbtClusterArn,
+            DbtTaskArn: !ImportValue retailops-DbtTaskDefinitionArn,
             SuccessTopic: !Ref PipelineSuccessTopic,
-            FailureTopic: !Ref PipelineFailureTopic
+            FailureTopic: !Ref PipelineFailureTopic,
+            SubnetA: !Ref SubnetA,
+            SubnetB: !Ref SubnetB,
+            SecurityGroupId: !Ref SecurityGroupId
           }
-
 
 Outputs:
   PipelineSuccessTopicArn:
