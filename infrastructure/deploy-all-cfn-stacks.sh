@@ -19,7 +19,7 @@ STACK_FILES=(
   "retops-s3datalake.yaml" 
   "retops-athena.yaml"
   "retops-iam.yaml"
- "retops-ecr-data-generator.yaml"
+  "retops-ecr-data-generator.yaml"
  "retops-lambda-data-generator.yaml"
  "retops-ecs-dbt.yaml"
  "retops-step-functions.yaml"
@@ -30,7 +30,7 @@ for file in "${STACK_FILES[@]}"; do
   template="$TEMPLATE_DIR/$file"
   stack_name=$(basename "$file" .yaml)
 
-  echo "Deploying stack:                                   stack_name:---------->     $stack_name"
+  echo "Deploying stack:                                 stack_name:                 --->   $stack_name  <---"
 
   aws cloudformation deploy \
     --stack-name "$stack_name" \

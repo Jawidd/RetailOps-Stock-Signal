@@ -177,14 +177,14 @@ Outputs:
   DbtClusterArn:
     Value: !GetAtt DbtCluster.Arn
     Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DbtClusterArn"
+      Name: retailops-DbtClusterArn
 
   DbtTaskDefinitionArn:
     Value: !Ref DbtTaskDefinition
     Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DbtTaskDefinitionArn"
+      Name: retailops-DbtTaskDefinitionArn
 
   DbtLogGroupName:
     Value: !Ref DbtLogGroup
     Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DbtLogGroupName"
+      Name: retailops-DbtLogGroupName
