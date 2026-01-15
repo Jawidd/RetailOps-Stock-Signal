@@ -116,7 +116,7 @@ Resources:
       TaskRoleArn: !GetAtt DbtTaskRole.Arn
       ContainerDefinitions:
         - Name: dbt
-          Image: ghcr.io/dbt-labs/dbt-athena:1.8.2
+          Image: 225442939245.dkr.ecr.eu-west-2.amazonaws.com/retailops-dbt-athena:1.8.2
           Essential: true
           Environment:
             - Name: AWS_DEFAULT_REGION
@@ -183,6 +183,7 @@ Outputs:
     Value: !Ref DbtTaskDefinition
     Export:
       Name: retailops-DbtTaskDefinitionArn
+
 
   DbtLogGroupName:
     Value: !Ref DbtLogGroup

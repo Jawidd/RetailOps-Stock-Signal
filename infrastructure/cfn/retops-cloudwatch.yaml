@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - CloudWatch dashboard + pipeline failure alarm
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: retailops
+
+Resources:
+  RetailOpsDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "${ProjectNameInput}-pipeline-health"
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [ "AWS/States", "ExecutionsSucceeded", "StateMachineArn", "${StateMachineArn}", { "stat": "Sum" } ],
+                    [ ".", "ExecutionsFailed", "StateMachineArn", "${StateMachineArn}", { "stat": "Sum" } ],
+                    [ ".", "ExecutionsStarted", "StateMachineArn", "${StateMachineArn}", { "stat": "Sum" } ]
+                  ],
+                  "view": "timeSeries",
+                  "region": "${AWS::Region}",
+                  "title": "Step Functions Executions",
+                  "period": 300
+                }
+              },
+              {
+                "type": "log",
+                "properties": {
+                  "query": "SOURCE '${DbtLogGroup}' | fields @timestamp, @message | filter @message like /ERROR|FAIL/ | sort @timestamp desc | limit 30",
+                  "region": "${AWS::Region}",
+                  "title": "Recent dbt Errors"
+                }
+              }
+            ]
+          }
+        - {
+            StateMachineArn: !ImportValue retailops-StateMachineArn,
+            DbtLogGroup: !ImportValue retailops-DbtLogGroupName
+          }
+
+  PipelineFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${ProjectNameInput}-pipeline-failure"
+      AlarmDescription: "Alarm when Step Functions execution fails"
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !ImportValue retailops-StateMachineArn
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !ImportValue retailops-PipelineFailureTopicArn
+
+Outputs:
+  DashboardName:
+    Value: !Ref RetailOpsDashboard

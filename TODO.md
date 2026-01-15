@@ -161,10 +161,17 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - create cfn for lambda_method
     - test LAMBDA  <!-- SUCCESS -->
 
-- []  
+- [X] setup ecs for dbt fargate task
     - create and deploy a cfn for ecs DbtCluster, DbtTaskDefinition
     - upload dbt project zip to s3 using upload script
-     
+
+- [ ] step functions
+
+- [ ] cloudwatch
+    - create simple cloudwatch dashboard
+
+
+
     
 
 

@@ -30,3 +30,6 @@ logs/dbt.log
 mailmap.txt
 todoignore.md
 experiments/favorita_data/*
+infrastructure/cfn/merge.sh
+infrastructure/cfn/all-retops-cfn.yaml
+
