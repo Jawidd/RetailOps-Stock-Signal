@@ -55,6 +55,7 @@ class RetailDataGenerator:
             }
         }
         
+        
         products = []
         product_id = 1
         
@@ -255,7 +256,9 @@ class RetailDataGenerator:
         
         return pd.DataFrame(sales)
     
-    def generate_inventory(self, products_df, stores_df, sales_df):
+    # def generate_inventory(self, products_df, stores_df, sales_df):
+    def generate_inventory(self, products_df, stores_df, sales_df, low_start=True, low_start_ratio=0.35):
+
         """Generate daily inventory snapshots with realistic replenishment."""
         
         inventory_records = []
@@ -286,13 +289,25 @@ class RetailDataGenerator:
                     # Slow turnover: 30-45 days
                     initial_stock = random.randint(10, 30)
                     reorder_point = random.randint(5, 10)
-                
+                # #########
+                # NEW: default (Lambda) low-start override to trigger early reorders/shipments
+                if low_start:
+                    r = np.random.random()
+                    if r < low_start_ratio:
+                        # start at/below reorder point -> immediate reorder possible
+                        initial_stock = random.randint(0, reorder_point)
+                    else:
+                        # start slightly above reorder point
+                        initial_stock = random.randint(reorder_point + 1, reorder_point * 3)
+                # #########
+
                 inventory_state[(store_id, product_id)] = {
                     'quantity_on_hand': initial_stock,
                     'quantity_on_order': 0,
                     'reorder_point': reorder_point,
                     'last_restock_date': None
                 }
+
         
         # Simulate inventory changes day by day
         for current_date in self.date_range:
@@ -433,7 +448,8 @@ class RetailDataGenerator:
         
         return df
     
-    def generate_all(self, output_dir='../data/synthetic/'):
+    # def generate_all(self, output_dir='../data/synthetic/'):
+    def generate_all(self, output_dir='../data/synthetic/', low_start=False):
         """Generate all datasets and save to CSV files."""
         
         output_path = Path(output_dir)
@@ -462,7 +478,9 @@ class RetailDataGenerator:
         print(f"  ✓ Generated {len(sales_df)} sales transactions")
         
         print("Generating inventory snapshots...")
-        inventory_df = self.generate_inventory(products_df, stores_df, sales_df)
+        # inventory_df = self.generate_inventory(products_df, stores_df, sales_df)
+        inventory_df = self.generate_inventory(products_df, stores_df, sales_df, low_start=low_start)
+
         print(f"  ✓ Generated {len(inventory_df)} inventory records")
         
         print("Generating shipments...")
@@ -530,11 +548,17 @@ def main():
                        help='Start date (YYYY-MM-DD)')
     parser.add_argument('--output', type=str, default='../data/synthetic/',
                        help='Output directory')
+    parser.add_argument('--low-start', action='store_true',
+                    help='Use low starting inventory (forces early reorders)')
+
     
     args = parser.parse_args()
     
     generator = RetailDataGenerator(start_date=args.start_date, days=args.days)
-    generator.generate_all(output_dir=args.output)
+    # generator.generate_all(output_dir=args.output)
+    generator.generate_all(output_dir=args.output, low_start=args.low_start)
+
+    
 
 
 if __name__ == '__main__':
