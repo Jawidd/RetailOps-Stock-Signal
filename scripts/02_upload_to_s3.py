@@ -86,7 +86,8 @@ class S3DataIngestion:
         uploaded = []
         for d in dates:
             part_prefix = f"raw/{table_name}/dt={d}"
-            file_name = f"{table_name}_{d.strftime('%Y%m%d')}.csv"
+            # file_name = f"{table_name}_{d.strftime('%Y%m%d')}.csv"
+            file_name = f"{table_name}.csv"
             key = f"{part_prefix}/{file_name}"
 
             if self._object_exists(key):

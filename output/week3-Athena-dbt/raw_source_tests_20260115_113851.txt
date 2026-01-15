@@ -1,0 +1,57 @@
+[0m11:38:53  Running with dbt=1.11.2
+[0m11:38:53  Registered adapter: athena=1.8.2
+[0m11:38:54  Found 13 models, 64 data tests, 6 sources, 605 macros
+[0m11:38:54  
+[0m11:38:54  Concurrency: 4 threads (target='dev')
+[0m11:38:54  
+[0m11:38:56  1 of 20 START test source_accepted_values_raw_retailops_raw_products_is_active__true__false__True__False  [RUN]
+[0m11:38:56  2 of 20 START test source_not_null_raw_retailops_raw_inventory_product_id ...... [RUN]
+[0m11:38:56  3 of 20 START test source_not_null_raw_retailops_raw_inventory_snapshot_date ... [RUN]
+[0m11:38:56  4 of 20 START test source_not_null_raw_retailops_raw_inventory_store_id ........ [RUN]
+[0m11:38:58  1 of 20 PASS source_accepted_values_raw_retailops_raw_products_is_active__true__false__True__False  [[32mPASS[0m in 2.81s]
+[0m11:38:58  5 of 20 START test source_not_null_raw_retailops_raw_products_product_id ....... [RUN]
+[0m11:39:00  5 of 20 PASS source_not_null_raw_retailops_raw_products_product_id ............. [[32mPASS[0m in 1.92s]
+[0m11:39:00  6 of 20 START test source_not_null_raw_retailops_raw_sales_product_id .......... [RUN]
+[0m11:39:01  4 of 20 PASS source_not_null_raw_retailops_raw_inventory_store_id .............. [[32mPASS[0m in 4.94s]
+[0m11:39:01  7 of 20 START test source_not_null_raw_retailops_raw_sales_quantity_sold ....... [RUN]
+[0m11:39:01  3 of 20 PASS source_not_null_raw_retailops_raw_inventory_snapshot_date ......... [[32mPASS[0m in 5.00s]
+[0m11:39:01  2 of 20 PASS source_not_null_raw_retailops_raw_inventory_product_id ............ [[32mPASS[0m in 5.00s]
+[0m11:39:01  8 of 20 START test source_not_null_raw_retailops_raw_sales_sale_date ........... [RUN]
+[0m11:39:01  9 of 20 START test source_not_null_raw_retailops_raw_sales_sale_id ............. [RUN]
+[0m11:39:04  8 of 20 PASS source_not_null_raw_retailops_raw_sales_sale_date ................. [[32mPASS[0m in 3.32s]
+[0m11:39:04  7 of 20 PASS source_not_null_raw_retailops_raw_sales_quantity_sold ............. [[32mPASS[0m in 3.41s]
+[0m11:39:04  9 of 20 PASS source_not_null_raw_retailops_raw_sales_sale_id ................... [[32mPASS[0m in 3.35s]
+[0m11:39:04  10 of 20 START test source_not_null_raw_retailops_raw_sales_store_id ........... [RUN]
+[0m11:39:04  11 of 20 START test source_not_null_raw_retailops_raw_sales_total_amount ....... [RUN]
+[0m11:39:04  12 of 20 START test source_not_null_raw_retailops_raw_shipments_shipment_id .... [RUN]
+[0m11:39:05  6 of 20 PASS source_not_null_raw_retailops_raw_sales_product_id ................ [[32mPASS[0m in 4.53s]
+[0m11:39:05  13 of 20 START test source_not_null_raw_retailops_raw_shipments_supplier_id .... [RUN]
+[0m11:39:09  10 of 20 PASS source_not_null_raw_retailops_raw_sales_store_id ................. [[32mPASS[0m in 4.81s]
+[0m11:39:09  12 of 20 PASS source_not_null_raw_retailops_raw_shipments_shipment_id .......... [[32mPASS[0m in 4.78s]
+[0m11:39:09  11 of 20 PASS source_not_null_raw_retailops_raw_sales_total_amount ............. [[32mPASS[0m in 4.81s]
+[0m11:39:09  14 of 20 START test source_not_null_raw_retailops_raw_stores_store_id .......... [RUN]
+[0m11:39:09  15 of 20 START test source_not_null_raw_retailops_raw_suppliers_supplier_id .... [RUN]
+[0m11:39:09  16 of 20 START test source_unique_raw_retailops_raw_products_product_id ........ [RUN]
+[0m11:39:09  13 of 20 PASS source_not_null_raw_retailops_raw_shipments_supplier_id .......... [[32mPASS[0m in 4.28s]
+[0m11:39:09  17 of 20 START test source_unique_raw_retailops_raw_sales_sale_id .............. [RUN]
+[0m11:39:11  17 of 20 PASS source_unique_raw_retailops_raw_sales_sale_id .................... [[32mPASS[0m in 2.02s]
+[0m11:39:11  18 of 20 START test source_unique_raw_retailops_raw_shipments_shipment_id ...... [RUN]
+[0m11:39:11  14 of 20 PASS source_not_null_raw_retailops_raw_stores_store_id ................ [[32mPASS[0m in 2.40s]
+[0m11:39:11  16 of 20 PASS source_unique_raw_retailops_raw_products_product_id .............. [[32mPASS[0m in 2.39s]
+[0m11:39:11  19 of 20 START test source_unique_raw_retailops_raw_stores_store_id ............ [RUN]
+[0m11:39:11  20 of 20 START test source_unique_raw_retailops_raw_suppliers_supplier_id ...... [RUN]
+[0m11:39:11  15 of 20 PASS source_not_null_raw_retailops_raw_suppliers_supplier_id .......... [[32mPASS[0m in 2.48s]
+[0m11:39:14  19 of 20 PASS source_unique_raw_retailops_raw_stores_store_id .................. [[32mPASS[0m in 2.43s]
+[0m11:39:14  20 of 20 PASS source_unique_raw_retailops_raw_suppliers_supplier_id ............ [[32mPASS[0m in 2.44s]
+[0m11:39:14  18 of 20 FAIL 34 source_unique_raw_retailops_raw_shipments_shipment_id ......... [[31mFAIL 34[0m in 2.48s]
+[0m11:39:14  
+[0m11:39:14  Finished running 20 data tests in 0 hours 0 minutes and 19.82 seconds (19.82s).
+[0m11:39:14  
+[0m11:39:14  [31mCompleted with 1 error, 0 partial successes, and 0 warnings:[0m
+[0m11:39:14  
+[0m11:39:14  [31mFailure in test source_unique_raw_retailops_raw_shipments_shipment_id (models/staging/_sources.yml)[0m
+[0m11:39:14    Got 34 results, configured to fail if != 0
+[0m11:39:14  
+[0m11:39:14    compiled code at target/compiled/retailops_athena/models/staging/_sources.yml/source_unique_raw_retailops_raw_shipments_shipment_id.sql
+[0m11:39:14  
+[0m11:39:14  Done. PASS=19 WARN=0 ERROR=1 SKIP=0 NO-OP=0 TOTAL=20

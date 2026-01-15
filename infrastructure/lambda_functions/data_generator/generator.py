@@ -110,7 +110,7 @@ class RetailDataGenerator:
                 sq_footage = random.randint(5000, 12000)
             
             # Introduce data quality issue: 15% of stores missing region
-            if np.random.random() < 0.15:
+            if np.random.random() < 0.03:
                 region = None
             
             stores.append({
@@ -406,8 +406,8 @@ class RetailDataGenerator:
                         else:
                             quantity_received = quantity_ordered
                         
-                        # Only add if received date is within our date range
-                        if received_date <= self.end_date:
+                        # Only add if received date is within  date range
+                        if pd.to_datetime(order_date) <= self.end_date:
                             shipments.append({
                                 'shipment_id': f"SHIP{shipment_id:05d}",
                                 'order_date': order_date,
@@ -524,9 +524,9 @@ class RetailDataGenerator:
 
 def main():
     parser = argparse.ArgumentParser(description='Generate synthetic retail data')
-    parser.add_argument('--days', type=int, default=180, 
-                       help='Number of days to generate (default: 180)')
-    parser.add_argument('--start-date', type=str, default='2024-07-01',
+    parser.add_argument('--days', type=int, default=200, 
+                       help='Number of days to generate (default: 200)')
+    parser.add_argument('--start-date', type=str, default='2025-07-01',
                        help='Start date (YYYY-MM-DD)')
     parser.add_argument('--output', type=str, default='../data/synthetic/',
                        help='Output directory')
