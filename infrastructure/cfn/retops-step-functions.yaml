@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - Step 2: SNS + basic Step Functions (Pass)
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: retailops
+
+Resources:
+  PipelineSuccessTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${ProjectNameInput}-pipeline-success"
+
+  PipelineFailureTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${ProjectNameInput}-pipeline-failure"
+
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-sfn-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: states.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BasicPublish
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [ "sns:Publish" ]
+                Resource:
+                  - !Ref PipelineSuccessTopic
+                  - !Ref PipelineFailureTopic
+
+  RetailOpsStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub "${ProjectNameInput}-daily-pipeline"
+      RoleArn: !GetAtt StepFunctionsRole.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "RetailOps pipeline (v2): Pass-only",
+          "StartAt": "PassState",
+          "States": {
+            "PassState": { "Type": "Pass", "Result": "ok", "End": true }
+          }
+        }
+
+Outputs:
+  PipelineSuccessTopicArn:
+    Value: !Ref PipelineSuccessTopic
+    Export:
+      Name: retailops-PipelineSuccessTopicArn
+
+  PipelineFailureTopicArn:
+    Value: !Ref PipelineFailureTopic
+    Export:
+      Name: retailops-PipelineFailureTopicArn
+
+  StateMachineArn:
+    Value: !GetAtt RetailOpsStateMachine.Arn
+    Export:
+      Name: retailops-StateMachineArn
