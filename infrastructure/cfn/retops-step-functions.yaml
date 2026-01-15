@@ -1,11 +1,12 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: RetailOps - Step 4: SNS + Step Functions + Lambda + ECS dbt (Fargate)
+Description: RetailOps - Final- SNS + Step Functions (Lambda -> ECS dbt -> Athena) + EventBridge schedule
 
 Parameters:
   ProjectNameInput:
     Type: String
     Default: retailops
 
+  # Networking for Fargate
   SubnetA:
     Type: AWS::EC2::Subnet::Id
     Default: subnet-0102629bea446df37
@@ -18,7 +19,17 @@ Parameters:
     Type: AWS::EC2::SecurityGroup::Id
     Default: sg-06157c5d80a25050e
 
+  # Optional: failure email subscription
+  FailureEmail:
+    Type: String
+    Default: ""
+
+Conditions:
+  HasFailureEmail: !Not [!Equals [!Ref FailureEmail, ""]]
+
 Resources:
+
+  # SNS Topics
   PipelineSuccessTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -29,6 +40,16 @@ Resources:
     Properties:
       TopicName: !Sub "${ProjectNameInput}-pipeline-failure"
 
+  FailureEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasFailureEmail
+    Properties:
+      Protocol: email
+      TopicArn: !Ref PipelineFailureTopic
+      Endpoint: !Ref FailureEmail
+
+
+  # Step Functions IAM Role
   StepFunctionsRole:
     Type: AWS::IAM::Role
     Properties:
@@ -40,32 +61,47 @@ Resources:
             Principal: { Service: states.amazonaws.com }
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: OrchestrateLambdaEcsAndSns
+        - PolicyName: PipelineOrchestration
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              # SNS publish
+              # Invoke generator lambda
+              - Effect: Allow
+                Action: [ "lambda:InvokeFunction" ]
+                Resource: !ImportValue retailops-DataGeneratorLambdaArn
+
+              # Run ECS dbt task
+              - Effect: Allow
+                Action: [ "ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks" ]
+                Resource: "*"
+
+              # Let SFN pass roles to ECS
+              - Effect: Allow
+                Action: [ "iam:PassRole" ]
+                Resource: "*"
+
+              # Athena validation query
+              - Effect: Allow
+                Action: [ "athena:StartQueryExecution", "athena:GetQueryExecution", "athena:GetQueryResults" ]
+                Resource: "*"
+
+              # S3 for Athena results output
+              - Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue AthenaQueryResultsBucketARN
+
+              # SNS notifications
               - Effect: Allow
                 Action: [ "sns:Publish" ]
                 Resource:
                   - !Ref PipelineSuccessTopic
                   - !Ref PipelineFailureTopic
 
-              # Invoke data generator lambda
-              - Effect: Allow
-                Action: [ "lambda:InvokeFunction" ]
-                Resource: !ImportValue retailops-DataGeneratorLambdaArn
 
-              # Run ECS task (dbt)
-              - Effect: Allow
-                Action: [ "ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks" ]
-                Resource: "*"
-
-              # Allow Step Functions to pass roles to ECS
-              - Effect: Allow
-                Action: [ "iam:PassRole" ]
-                Resource: "*"
-
+  # Step Functions State Machine
   RetailOpsStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
@@ -74,7 +110,7 @@ Resources:
       DefinitionString: !Sub
         - |
           {
-            "Comment": "RetailOps pipeline (v4): Lambda -> ECS dbt",
+            "Comment": "RetailOps Daily Pipeline (Final): Lambda -> ECS dbt -> Athena check -> SNS",
             "StartAt": "GenerateData",
             "States": {
               "GenerateData": {
@@ -82,7 +118,9 @@ Resources:
                 "Resource": "arn:aws:states:::lambda:invoke",
                 "Parameters": {
                   "FunctionName": "${DataGenArn}",
-                  "Payload": { "date.$": "$.date" }
+                  "Payload": {
+                    "date.$": "$.date"
+                  }
                 },
                 "ResultPath": "$.dataGen",
                 "Next": "RunDbt",
@@ -107,6 +145,23 @@ Resources:
                   }
                 },
                 "ResultPath": "$.dbt",
+                "Next": "AthenaValidation",
+                "Catch": [
+                  { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
+                ]
+              },
+
+              "AthenaValidation": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
+                "Parameters": {
+                  "QueryString": "SELECT max(sale_date) AS latest_sale_date, count(*) AS rows_last_7_days FROM retailops_marts.fct_daily_sales WHERE sale_date >= current_date - interval '7' day",
+                  "WorkGroup": "${WorkGroup}",
+                  "ResultConfiguration": {
+                    "OutputLocation": "s3://${AthenaResultsBucket}/quality-checks/"
+                  }
+                },
+                "ResultPath": "$.athenaCheck",
                 "Next": "NotifySuccess",
                 "Catch": [
                   { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
@@ -119,7 +174,7 @@ Resources:
                 "Parameters": {
                   "TopicArn": "${SuccessTopic}",
                   "Subject": "RetailOps Pipeline Success",
-                  "Message.$": "States.Format('OK (Lambda + dbt). date={}', $.date)"
+                  "Message.$": "States.Format('Pipeline succeeded. date={}', $.date)"
                 },
                 "End": true
               },
@@ -130,24 +185,58 @@ Resources:
                 "Parameters": {
                   "TopicArn": "${FailureTopic}",
                   "Subject": "RetailOps Pipeline FAILED",
-                  "Message.$": "States.Format('FAILED. error={}', $.error)"
+                  "Message.$": "States.Format('Pipeline failed. error={}', $.error)"
                 },
                 "Next": "FailState"
               },
 
-              "FailState": { "Type": "Fail" }
+              "FailState": { "Type": "Fail", "Error": "RetailOpsPipelineFailed" }
             }
           }
         - {
             DataGenArn: !ImportValue retailops-DataGeneratorLambdaArn,
             DbtClusterArn: !ImportValue retailops-DbtClusterArn,
             DbtTaskArn: !ImportValue retailops-DbtTaskDefinitionArn,
+            WorkGroup: !ImportValue retailops-AthenaWorkGroupName,
+            AthenaResultsBucket: !ImportValue AthenaQueryResultsBucketName,
             SuccessTopic: !Ref PipelineSuccessTopic,
             FailureTopic: !Ref PipelineFailureTopic,
             SubnetA: !Ref SubnetA,
             SubnetB: !Ref SubnetB,
             SecurityGroupId: !Ref SecurityGroupId
           }
+
+  # EventBridge: daily trigger at 06:00 UTC
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-eventbridge-sfn-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: events.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartStateMachine
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [ "states:StartExecution" ]
+                Resource: !GetAtt RetailOpsStateMachine.Arn
+
+  DailyScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${ProjectNameInput}-daily-trigger"
+      Description: "Trigger RetailOps pipeline daily at 06:00 UTC"
+      ScheduleExpression: "cron(0 6 * * ? *)"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt RetailOpsStateMachine.Arn
+          RoleArn: !GetAtt EventBridgeRole.Arn
+          Input: "{}"
 
 Outputs:
   PipelineSuccessTopicArn:
