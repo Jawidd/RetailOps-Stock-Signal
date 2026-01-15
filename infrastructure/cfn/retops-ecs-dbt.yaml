@@ -110,13 +110,16 @@ Resources:
       Family: !Sub "${ProjectNameInput}-${Env}-dbt-task"
       NetworkMode: awsvpc
       RequiresCompatibilities: [ FARGATE ]
-      Cpu: "512"
-      Memory: "1024"
+      Cpu: "1024"
+      Memory: "2048"
+      EphemeralStorage:
+        SizeInGiB: 40
       ExecutionRoleArn: !GetAtt DbtTaskExecutionRole.Arn
       TaskRoleArn: !GetAtt DbtTaskRole.Arn
       ContainerDefinitions:
         - Name: dbt
           Image: 225442939245.dkr.ecr.eu-west-2.amazonaws.com/retailops-dbt-athena:1.8.2
+          StopTimeout: 100
           Essential: true
           Environment:
             - Name: AWS_DEFAULT_REGION
@@ -136,7 +139,7 @@ Resources:
 
               mkdir -p /root/.dbt /tmp/dbtproj
 
-              cat > /root/.dbt/profiles.yml <<'YML'
+              cat > /root/.dbt/profiles.yml <<YML
               retailops_athena:
                 target: dev
                 outputs:
@@ -160,7 +163,12 @@ Resources:
               print("Downloaded", f"s3://{bucket}/{key}")
               PY
 
-              unzip -o /tmp/dbt_athena.zip -d /tmp/dbtproj >/dev/null
+
+              unzip -o /tmp/dbt_athena.zip -d /tmp/dbtproj
+              ls -la /tmp/dbtproj
+              find /tmp/dbtproj -maxdepth 3 -type f -name "dbt_project.yml" -print
+
+
               cd /tmp/dbtproj/dbt_athena
 
               dbt deps --profiles-dir /root/.dbt
@@ -179,13 +187,20 @@ Outputs:
     Export:
       Name: retailops-DbtClusterArn
 
-  DbtTaskDefinitionArn:
-    Value: !Ref DbtTaskDefinition
-    Export:
-      Name: retailops-DbtTaskDefinitionArn
-
+  # DbtTaskDefinitionArn:
+  #   Value: !Ref DbtTaskDefinition
+  #   Export:
+  #     Name: retailops-DbtTaskDefinitionArn
 
   DbtLogGroupName:
     Value: !Ref DbtLogGroup
     Export:
       Name: retailops-DbtLogGroupName
+
+  DbtTaskDefinitionFamily:
+    Description: Stable task definition identifier (family name). Always uses latest active revision.
+    Value: !Sub "${ProjectNameInput}-${Env}-dbt-task"
+    Export:
+      Name: retailops-DbtTaskDefinitionFamily
+
+

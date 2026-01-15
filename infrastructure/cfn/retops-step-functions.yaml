@@ -147,7 +147,7 @@ Resources:
                 "Resource": "arn:aws:states:::ecs:runTask.sync",
                 "Parameters": {
                   "Cluster": "${DbtClusterArn}",
-                  "TaskDefinition": "${DbtTaskDefinitionArn}",
+                  "TaskDefinition": "${DbtTaskDefinitionFamily}",
                   "LaunchType": "FARGATE",
                   "NetworkConfiguration": {
                     "AwsvpcConfiguration": {
@@ -213,7 +213,7 @@ Resources:
         - {
             DataGenArn: !ImportValue retailops-DataGeneratorLambdaArn,
             DbtClusterArn: !ImportValue retailops-DbtClusterArn,
-            DbtTaskDefinitionArn: !ImportValue retailops-DbtTaskDefinitionArn,
+            DbtTaskDefinitionFamily: !ImportValue retailops-DbtTaskDefinitionFamily,
             WorkGroupName: !ImportValue retailops-AthenaWorkGroupName,
             AthenaResultsBucket: !ImportValue AthenaQueryResultsBucketName,
             SuccessTopicArn: !Ref PipelineSuccessTopic,

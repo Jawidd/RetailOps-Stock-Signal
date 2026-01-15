@@ -16,11 +16,11 @@ echo "Region: $REGION"
 # The order is important as iamstacj import values from both stacks(s3datalake,athena)
 # lambda stack depends on ecr stack
 STACK_FILES=(
-  #  "retops-s3datalake.yaml" 
-  #  "retops-athena.yaml"
-  #  "retops-iam.yaml"
-  #  "retops-ecr-data-generator.yaml"
-  #  "retops-lambda-data-generator.yaml"
+   "retops-s3datalake.yaml" 
+   "retops-athena.yaml"
+   "retops-iam.yaml"
+   "retops-ecr-data-generator.yaml"
+   "retops-lambda-data-generator.yaml"
    "retops-ecs-dbt.yaml"
    "retops-step-functions.yaml"
    "retops-cloudwatch.yaml"
