@@ -28,7 +28,7 @@ Resources:
             Principal: { Service: states.amazonaws.com }
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: BasicPublish
+        - PolicyName: OrchestrateLambdaAndSns
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -37,20 +37,63 @@ Resources:
                 Resource:
                   - !Ref PipelineSuccessTopic
                   - !Ref PipelineFailureTopic
+              - Effect: Allow
+                Action: [ "lambda:InvokeFunction" ]
+                Resource: !ImportValue retailops-DataGeneratorLambdaArn
+
 
   RetailOpsStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
       StateMachineName: !Sub "${ProjectNameInput}-daily-pipeline"
       RoleArn: !GetAtt StepFunctionsRole.Arn
-      DefinitionString: !Sub |
-        {
-          "Comment": "RetailOps pipeline (v2): Pass-only",
-          "StartAt": "PassState",
-          "States": {
-            "PassState": { "Type": "Pass", "Result": "ok", "End": true }
+       DefinitionString: !Sub
+        - |
+          {
+            "Comment": "RetailOps pipeline (v3): Lambda generate",
+            "StartAt": "GenerateData",
+            "States": {
+              "GenerateData": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Parameters": {
+                  "FunctionName": "${DataGenArn}",
+                  "Payload": { "date.$": "$.date" }
+                },
+                "Next": "NotifySuccess",
+                "Catch": [
+                  { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
+                ]
+              },
+              "NotifySuccess": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::sns:publish",
+                "Parameters": {
+                  "TopicArn": "${SuccessTopic}",
+                  "Subject": "RetailOps Pipeline Success",
+                  "Message.$": "States.Format('OK (Lambda). date={}', $.date)"
+                },
+                "End": true
+              },
+              "NotifyFailure": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::sns:publish",
+                "Parameters": {
+                  "TopicArn": "${FailureTopic}",
+                  "Subject": "RetailOps Pipeline FAILED",
+                  "Message.$": "States.Format('FAILED (Lambda). error={}', $.error)"
+                },
+                "Next": "FailState"
+              },
+              "FailState": { "Type": "Fail" }
+            }
           }
-        }
+        - {
+            DataGenArn: !ImportValue retailops-DataGeneratorLambdaArn,
+            SuccessTopic: !Ref PipelineSuccessTopic,
+            FailureTopic: !Ref PipelineFailureTopic
+          }
+
 
 Outputs:
   PipelineSuccessTopicArn:
