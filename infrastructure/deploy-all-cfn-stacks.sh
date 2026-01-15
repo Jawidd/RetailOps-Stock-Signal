@@ -21,6 +21,7 @@ STACK_FILES=(
   "retops-iam.yaml"
  "retops-ecr-data-generator.yaml"
  "retops-lambda-data-generator.yaml"
+ "retops-ecs-dbt.yaml"
 )
 
 

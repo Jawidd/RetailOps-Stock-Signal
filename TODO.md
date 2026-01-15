@@ -159,7 +159,12 @@ This project will show I can build an end-to-end data workflow (and later add ML
     - create dockerfile for lambda
     - build and push image to lambda_ecr_repo with lambda code included
     - create cfn for lambda_method
-    - test LAMBDA!!!!!
+    - test LAMBDA  <!-- SUCCESS -->
+
+- []  
+    - create a ecs DbtCluster, DbtTaskDefinition
+    - upload dbt project zip to s3 ---> 
+    
 
 
 

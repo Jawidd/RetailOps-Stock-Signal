@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - ECS Fargate task definition for running dbt-athena
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: retailops
+
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  DbtCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${ProjectNameInput}-${Env}-dbt-cluster"
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: Env
+          Value: !Ref Env
+
+  DbtLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${ProjectNameInput}/${Env}/dbt"
+      RetentionInDays: 14
+
+  DbtTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-${Env}-dbt-task-exec-role"
+      Path: !Sub "/retailops/${Env}/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  DbtTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-${Env}-dbt-task-role"
+      Path: !Sub "/retailops/${Env}/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${ProjectNameInput}-${Env}-dbt-athena-s3-glue"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Data lake bucket
+              - Effect: Allow
+                Action: [ "s3:ListBucket", "s3:GetBucketLocation" ]
+                Resource: !ImportValue retailops-DataLakeBucketARN
+              - Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject", "s3:DeleteObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue retailops-DataLakeBucketARN
+
+              # Athena results bucket
+              - Effect: Allow
+                Action: [ "s3:ListBucket", "s3:GetBucketLocation" ]
+                Resource: !ImportValue AthenaQueryResultsBucketARN
+              - Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject", "s3:DeleteObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue AthenaQueryResultsBucketARN
+
+              # Athena
+              - Effect: Allow
+                Action:
+                  - athena:StartQueryExecution
+                  - athena:GetQueryExecution
+                  - athena:GetQueryResults
+                  - athena:StopQueryExecution
+                  - athena:GetWorkGroup
+                Resource: "*"
+
+              # Glue catalog (dbt creates/updates tables in Glue for Athena)
+              - Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                  - glue:DeleteTable
+                Resource: "*"
+
+  DbtTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${ProjectNameInput}-${Env}-dbt-task"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [ FARGATE ]
+      Cpu: "512"
+      Memory: "1024"
+      ExecutionRoleArn: !GetAtt DbtTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt DbtTaskRole.Arn
+      ContainerDefinitions:
+        - Name: dbt
+          Image: ghcr.io/dbt-labs/dbt-athena:1.8.2
+          Essential: true
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: DATALAKE_BUCKET
+              Value: !ImportValue retailops-DataLakeBucketName
+            - Name: ATHENA_RESULTS_BUCKET
+              Value: !ImportValue AthenaQueryResultsBucketName
+            - Name: ATHENA_WORKGROUP
+              Value: !ImportValue retailops-AthenaWorkGroupName
+          Command:
+            - bash
+            - -lc
+            - |
+              set -euo pipefail
+              python -m pip install -q boto3
+
+              mkdir -p /root/.dbt /tmp/dbtproj
+
+              cat > /root/.dbt/profiles.yml <<'YML'
+              retailops_athena:
+                target: dev
+                outputs:
+                  dev:
+                    type: athena
+                    region_name: ${AWS_DEFAULT_REGION}
+                    work_group: ${ATHENA_WORKGROUP}
+                    database: retailops
+                    schema: marts
+                    s3_staging_dir: s3://${ATHENA_RESULTS_BUCKET}/dbt/
+                    threads: 4
+                    poll_interval: 5
+              YML
+
+              python - <<'PY'
+              import os, boto3
+              s3 = boto3.client("s3")
+              bucket = os.environ["DATALAKE_BUCKET"]
+              key = "metadata/dbt/dbt_athena.zip"
+              s3.download_file(bucket, key, "/tmp/dbt_athena.zip")
+              print("Downloaded", f"s3://{bucket}/{key}")
+              PY
+
+              unzip -o /tmp/dbt_athena.zip -d /tmp/dbtproj >/dev/null
+              cd /tmp/dbtproj/dbt_athena
+
+              dbt deps --profiles-dir /root/.dbt
+              dbt run  --profiles-dir /root/.dbt
+              dbt test --profiles-dir /root/.dbt
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref DbtLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: dbt
+
+Outputs:
+  DbtClusterArn:
+    Value: !GetAtt DbtCluster.Arn
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DbtClusterArn"
+
+  DbtTaskDefinitionArn:
+    Value: !Ref DbtTaskDefinition
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DbtTaskDefinitionArn"
+
+  DbtLogGroupName:
+    Value: !Ref DbtLogGroup
+    Export:
+      Name: !Sub "${ProjectNameInput}-${Env}-DbtLogGroupName"
