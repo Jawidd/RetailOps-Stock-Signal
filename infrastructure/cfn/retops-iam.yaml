@@ -119,8 +119,3 @@ Outputs:
     Export:
       Name: retailops-PipelineRoleArn
 
-  RetailOpsPipelineRoleARN2: #delete_duplicate
-    Description: "RetailOpsPipelineRole Arn"
-    Value: !GetAtt RetailOpsPipelineRole.Arn
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-PipelineRoleArn"

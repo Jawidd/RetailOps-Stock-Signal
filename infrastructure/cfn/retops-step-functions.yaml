@@ -105,6 +105,16 @@ Resources:
                 Resource:
                   - !Ref PipelineSuccessTopic
                   - !Ref PipelineFailureTopic
+              # Step Functions needs this to create its managed EventBridge rule for ecs:runTask.sync
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DescribeRule
+                  - events:DeleteRule
+                  - events:RemoveTargets
+                Resource: "*"
+
 
   # State machine: GenerateData -> RunDbt -> AthenaValidation -> NotifySuccess
   RetailOpsPipelineStateMachine:

@@ -46,13 +46,3 @@ Outputs:
     Value: !Ref DataGeneratorLambda
     Export:
       Name: retailops-DataGeneratorLambdaName
-
-  DataGeneratorLambdaArn2: #delete_duplicate
-    Value: !GetAtt DataGeneratorLambda.Arn
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaArn"
-
-  DataGeneratorLambdaName2: #delete_duplicate
-    Value: !Ref DataGeneratorLambda
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaName"

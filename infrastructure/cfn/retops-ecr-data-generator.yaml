@@ -79,20 +79,3 @@ Outputs:
       Name: retailops-DataGeneratorLambdaRoleArn
 
 
-  DataGeneratorRepoUri2: #delete_duplicate
-    Description: ECR repository URI
-    Value: !GetAtt DataGeneratorRepo.RepositoryUri
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorRepoUri"
-
-  DataGeneratorImageUri2: #delete_duplicate
-    Description: ECR image URI (repo:latest)
-    Value: !Sub "${DataGeneratorRepo.RepositoryUri}:latest"
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorImageUri"
-
-  DataGeneratorLambdaRoleArn2: #delete_duplicate
-    Description: IAM role ARN for Lambda
-    Value: !GetAtt DataGeneratorLambdaRole.Arn
-    Export:
-      Name: !Sub "${ProjectNameInput}-${Env}-DataGeneratorLambdaRoleArn"
