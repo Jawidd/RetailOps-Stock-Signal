@@ -97,6 +97,7 @@ Resources:
                   - glue:GetDatabases
                   - glue:GetTable
                   - glue:GetTables
+                  - glue:GetTableVersions
                   - glue:GetPartition
                   - glue:GetPartitions
                   - glue:CreateTable
@@ -149,8 +150,8 @@ Resources:
                       type: athena
                       region_name: ${AWS_DEFAULT_REGION}
                       work_group: ${ATHENA_WORKGROUP}
-                      database: retailops
-                      schema: marts
+                      database: AwsDataCatalog
+                      schema: retailops
                       s3_staging_dir: s3://${ATHENA_RESULTS_BUCKET}/dbt/
                       threads: 4
                       poll_interval: 5

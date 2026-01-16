@@ -172,10 +172,30 @@ This project will show I can build an end-to-end data workflow (and later add ML
 
 
 
-    
+SFN_ARN=$(aws cloudformation list-exports --region eu-west-2 \
+--query "Exports[?Name=='retailops-StateMachineArn'].Value" --output text)
+
+aws stepfunctions start-execution \
+  --state-machine-arn "$SFN_ARN" \
+  --input '{"date":"2025-01-18"}' \
+  --region eu-west-2
+
+
+
+arn:aws:ecs:eu-west-2:225442939245:task/retailops-dev-dbt-cluster/75c9d3efcf514985a69d51a8afd6ca54
+
+aws ecs describe-tasks \
+  --region eu-west-2 \
+  --cluster arn:aws:ecs:eu-west-2:225442939245:cluster/retailops-dev-dbt-cluster \
+  --tasks arn:aws:ecs:eu-west-2:225442939245:task/retailops-dev-dbt-cluster/75c9d3efcf514985a69d51a8afd6ca54
 
 
 
 
+aws logs get-log-events \
+  --region eu-west-2 \
+  --log-group-name "/ecs/retailops/dev/dbt" \
+  --log-stream-name "dbt/dbt/e03ce54d7f3640baaa733be0bd1dceb8" \
+  --start-from-head
 
 
