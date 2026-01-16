@@ -182,20 +182,14 @@ aws stepfunctions start-execution \
 
 
 
-arn:aws:ecs:eu-west-2:225442939245:task/retailops-dev-dbt-cluster/75c9d3efcf514985a69d51a8afd6ca54
-
-aws ecs describe-tasks \
+EXEC_ARN="arn:aws:states:eu-west-2:225442939245:execution:retailops-daily-pipeline:00e0ddf2-92ec-4e55-bfc1-226bbd6c7283"
+aws stepfunctions get-execution-history \
+  --execution-arn "$00e0ddf2-92ec-4e55-bfc1-226bbd6c7283" \
   --region eu-west-2 \
-  --cluster arn:aws:ecs:eu-west-2:225442939245:cluster/retailops-dev-dbt-cluster \
-  --tasks arn:aws:ecs:eu-west-2:225442939245:task/retailops-dev-dbt-cluster/75c9d3efcf514985a69d51a8afd6ca54
+  --max-results 1000 > /tmp/sfn_history.json
 
+# show only AthenaValidation-related lines
+grep -n "AthenaValidation" -n /tmp/sfn_history.json | head -n 50
 
-
-
-aws logs get-log-events \
-  --region eu-west-2 \
-  --log-group-name "/ecs/retailops/dev/dbt" \
-  --log-stream-name "dbt/dbt/e03ce54d7f3640baaa733be0bd1dceb8" \
-  --start-from-head
-
-
+arn:aws:states:eu-west-2:225442939245:stateMachine:retailops-daily-pipeline
+arn:aws:states:eu-west-2:225442939245:execution:retailops-daily-pipeline:00e0ddf2-92ec-4e55-bfc1-226bbd6c7283
