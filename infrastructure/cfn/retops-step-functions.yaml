@@ -92,6 +92,13 @@ Resources:
 
               - Effect: Allow
                 Action:
+                  - glue:GetDatabase
+                  - glue:GetTable
+                  - glue:GetPartitions
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
                   - s3:ListBucket
                   - s3:GetBucketLocation
                 Resource: !ImportValue AthenaQueryResultsBucketARN
@@ -265,7 +272,13 @@ Resources:
         - Id: !Sub "${ProjectNameInput}-daily-pipeline-target"
           Arn: !GetAtt RetailOpsPipelineStateMachine.Arn
           RoleArn: !GetAtt EventBridgeExecutionRole.Arn
-          Input: "{}"
+          InputTransformer:
+            InputPathsMap:
+              time: "$.time"
+            InputTemplate: |
+              {
+                "date": <time>
+              }
 
 
 Outputs:

@@ -182,14 +182,4 @@ aws stepfunctions start-execution \
 
 
 
-EXEC_ARN="arn:aws:states:eu-west-2:225442939245:execution:retailops-daily-pipeline:00e0ddf2-92ec-4e55-bfc1-226bbd6c7283"
-aws stepfunctions get-execution-history \
-  --execution-arn "$00e0ddf2-92ec-4e55-bfc1-226bbd6c7283" \
-  --region eu-west-2 \
-  --max-results 1000 > /tmp/sfn_history.json
-
-# show only AthenaValidation-related lines
-grep -n "AthenaValidation" -n /tmp/sfn_history.json | head -n 50
-
-arn:aws:states:eu-west-2:225442939245:stateMachine:retailops-daily-pipeline
-arn:aws:states:eu-west-2:225442939245:execution:retailops-daily-pipeline:00e0ddf2-92ec-4e55-bfc1-226bbd6c7283
+EXEC_ARN="arn:aws:states:eu-west-2:225442939245:execution:retailops-daily-pipeline:51f7ad7b-df68-4db5-b4f8-83283cf0ef52"
