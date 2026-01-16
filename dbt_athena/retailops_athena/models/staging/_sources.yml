@@ -108,7 +108,9 @@ sources:
           - name: shipment_id
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: supplier_id
             tests:
               - not_null

@@ -134,46 +134,67 @@ Resources:
             - bash
             - -lc
             - |
-              set -euo pipefail
-              python -m pip install -q boto3
+                set -euo pipefail
 
-              mkdir -p /root/.dbt /tmp/dbtproj
+                echo "=== boot ==="
+                python -m pip install -q boto3
 
-              cat > /root/.dbt/profiles.yml <<YML
-              retailops_athena:
-                target: dev
-                outputs:
-                  dev:
-                    type: athena
-                    region_name: ${AWS_DEFAULT_REGION}
-                    work_group: ${ATHENA_WORKGROUP}
-                    database: retailops
-                    schema: marts
-                    s3_staging_dir: s3://${ATHENA_RESULTS_BUCKET}/dbt/
-                    threads: 4
-                    poll_interval: 5
-              YML
+                mkdir -p /root/.dbt /tmp/dbtproj
 
-              python - <<'PY'
-              import os, boto3
-              s3 = boto3.client("s3")
-              bucket = os.environ["DATALAKE_BUCKET"]
-              key = "metadata/dbt/dbt_athena.zip"
-              s3.download_file(bucket, key, "/tmp/dbt_athena.zip")
-              print("Downloaded", f"s3://{bucket}/{key}")
-              PY
+                cat > /root/.dbt/profiles.yml <<YML
+                retailops_athena:
+                  target: dev
+                  outputs:
+                    dev:
+                      type: athena
+                      region_name: ${AWS_DEFAULT_REGION}
+                      work_group: ${ATHENA_WORKGROUP}
+                      database: retailops
+                      schema: marts
+                      s3_staging_dir: s3://${ATHENA_RESULTS_BUCKET}/dbt/
+                      threads: 4
+                      poll_interval: 5
+                YML
 
+                python - <<'PY'
+                import os, boto3
+                s3 = boto3.client("s3")
+                bucket = os.environ["DATALAKE_BUCKET"]
+                key = "metadata/dbt/dbt_athena.zip"
+                s3.download_file(bucket, key, "/tmp/dbt_athena.zip")
+                print("Downloaded", f"s3://{bucket}/{key}")
+                PY
 
-              unzip -o /tmp/dbt_athena.zip -d /tmp/dbtproj
-              ls -la /tmp/dbtproj
-              find /tmp/dbtproj -maxdepth 3 -type f -name "dbt_project.yml" -print
+                echo "=== unzip ==="
+                set +e
+                unzip -o /tmp/dbt_athena.zip -d /tmp/dbtproj > /tmp/unzip.log 2>&1
+                rc=$?
+                set -e
+                tail -n 80 /tmp/unzip.log
+                echo "unzip rc=$rc"
+                if [ "$rc" -gt 1 ]; then exit "$rc"; fi
 
+                echo "=== extracted layout ==="
+                find /tmp/dbtproj -maxdepth 4 -name dbt_project.yml -print
 
-              cd /tmp/dbtproj/dbt_athena
+                PROJECT_DIR="/tmp/dbtproj/dbt_athena/retailops_athena"
+                echo "PROJECT_DIR=$PROJECT_DIR"
+                ls -la "$PROJECT_DIR" | head -n 50
+                test -f "$PROJECT_DIR/dbt_project.yml"
 
-              dbt deps --profiles-dir /root/.dbt
-              dbt run  --profiles-dir /root/.dbt
-              dbt test --profiles-dir /root/.dbt
+                echo "=== dbt version ==="
+                command -v dbt || { echo "dbt not found on PATH"; exit 127; }
+                dbt --version
+
+                echo "=== dbt deps ==="
+                dbt deps --profiles-dir /root/.dbt --project-dir "$PROJECT_DIR"
+
+                echo "=== dbt run ==="
+                dbt run --profiles-dir /root/.dbt --project-dir "$PROJECT_DIR"
+
+                echo "=== dbt test ==="
+                dbt test --profiles-dir /root/.dbt --project-dir "$PROJECT_DIR"
+
           LogConfiguration:
             LogDriver: awslogs
             Options:

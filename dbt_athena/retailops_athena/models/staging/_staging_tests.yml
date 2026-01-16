@@ -13,16 +13,14 @@ models:
         description: "Profit per unit (price - cost)"
         tests:
           - dbt_utils.accepted_range:
-              arguments:
-                min_value: 0
+              min_value: 0
 
       - name: supplier_id
         description: "Foreign key to suppliers"
         tests:
           - relationships:
-              arguments:
-                to: ref('stg_suppliers')
-                field: supplier_id
+              to: ref('stg_suppliers')
+              field: supplier_id
 
 
   - name: stg_stores
@@ -37,8 +35,7 @@ models:
       - name: region
         tests:
           - accepted_values:
-              arguments:
-                values: ['North', 'South', 'East', 'West', 'Unknown']
+              values: ['North', 'South', 'East', 'West', 'Unknown']
 
   - name: stg_suppliers
     description: "Cleaned supplier dimension"
