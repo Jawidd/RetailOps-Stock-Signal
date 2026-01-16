@@ -141,8 +141,17 @@ Resources:
         - |
           {
             "Comment": "RetailOps pipeline: Lambda -> ECS dbt -> Athena -> SNS",
-            "StartAt": "GenerateData",
+            "StartAt": "ExtractDate",
             "States": {
+              "ExtractDate": {
+                "Type": "Pass",
+                "Parameters": {
+                  "date.$": "States.ArrayGetItem(States.StringSplit($.time, 'T'), 0)"
+                },
+                "ResultPath": "$",
+                "Next": "GenerateData"
+              },
+
               "GenerateData": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::lambda:invoke",
@@ -277,7 +286,7 @@ Resources:
               time: "$.time"
             InputTemplate: |
               {
-                "date": <time>
+                "time": "<time>"
               }
 
 
