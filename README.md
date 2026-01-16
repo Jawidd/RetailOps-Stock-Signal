@@ -1,121 +1,72 @@
-# RetailOps Companion
+# RetailOps Data Platform
 
-Work in progress: building a retail analytics platform with a local Postgres + dbt stack and an AWS data lake footprint.
+## Overview
 
+* Retail analytics platform on AWS I built to learn data engineering.
+* Started with real data, then moved to synthetic data I could control.
+* Built infrastructure, pipelines, transformations, and orchestration.
 
-## Current status
+**Stack**: S3, Glue, Athena, Lambda, ECS Fargate, Step Functions, dbt, CloudFormation
 
-* [X] Week 1  — Local analytics stack (Favorita + Postgres + dbt + Metabase + R checks) 
-* [X] Week 2           Synthetic data + AWS data lake  Implemented 
-* [X] Week 3           dbt transformation layer (Athena / Glue-backed models + tests)
-* [ ]Week 3 Part II - Planned— Orchestration + monitoring  
-* Week 5 Planned— Analytics + BI layer  
-* Week 6 Planned— ML (demand forecasting)  
+## Why This Project
 
-## Tech stack
+* Build something real (not a tutorial).
+* Show end-to-end data engineering skills.
 
-Implemented
+## What I Did (by week)
 
-* Postgres
-* dbt (dbt-postgres)
-* Metabase
-* Python
-* SQL
-* R
-* Docker / Docker Compose
-* AWS CloudFormation (S3 / Glue / Athena / IAM templates)
+### Week 1: Understanding the Domain (Favorita Dataset)
 
-Planned
+* DuckDB phase
+* Postgres + dbt phase
+* R pipeline phase
+* Why I moved to synthetic data
 
-* Orchestration (scheduled runs, retries, notifications)
-* Monitoring and alerting
-* Forecasting / ML
+### Week 2: AWS Data Lake
 
+* S3 data lake
+* Glue catalog + Athena workgroup
+* IAM roles
+* Data upload script
+* Validation in Athena
 
-## Repo At A Glance
+### Week 3: dbt Transformation Layer
 
-* `requirements.txt`
-* `data/synthetic/` raw_data
-* `dbt_athena/retailops_athena/models/` stage,dimensions,fact and mart queries
-* `infrastructure/cfn/` CloudFormation
-* `scripts/`
+* dbt-athena setup
+* staging models + tests
+* marts + tests + analysis queries
 
+### Week 4: Orchestration with Step Functions
 
-## Current Architecture (WIP)
+* Lambda data generator (container image)
+* ECS dbt runner
+* Step Functions pipeline + schedule
+* Monitoring (CloudWatch + alarm)
 
-- S3 data lake 
-- Glue Data Catalog + Athena: templates for serverless queryingtemplate that is still focused on S3 while Athena/Glue permissions are being finalized.
+## Current State
 
+* What works
+* What’s next
 
+## Design Decisions
 
-## Week 1 — Local analytics stack (Favorita + Postgres + dbt + Metabase & R )
+* Why Athena / ECS / Step Functions / partition projection / synthetic data
 
-Ship a complete local workflow: raw data → checks → dbt models → dashboard export.
+## Cost
 
-#### What I did
+* Rough monthly estimate
 
-* Loaded Favorita CSVs into Postgres (raw schema).
-* Ran R scripts for data availability checks + quality checks, and generated a report.
-* Built dbt staging models and a daily sales mart.
-* Built charts in Metabase and exported the dashboard.
+## Setup
 
-#### Evidence (R report)
+* Deploy infra
+* Upload dbt project
+* Build/push Lambda image
+* Manual trigger
 
-* Source: `experiments/favorita-r-pipeline/R/reports/week1_report.Rmd`
-* HTML: `experiments/favorita-r-pipeline/R/reports/week1_report.html`
-* Screenshot: `experiments/favorita-r-pipeline/R/reports/week1-R-dashboard-Screenshot.png`
+## Repo Structure
 
-![Week 1 R report screenshot](experiments/favorita-r-pipeline/R/reports/week1-R-dashboard-Screenshot.png)
-
-#### Evidence (Metabase exports)
-
-* PNG: `output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png`
-* PDF: `output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.pdf`
-
-![Week 1 Metabase dashboard](output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png)
-
-
-
-
-### Week 2 — Synthetic data + AWS data lake (implemented, execution proof TODO)
-
-#### Goal
-
-Extend the project beyond Favorita by adding retail ops concepts (orders/inventory/shipping), then build a cloud-friendly data lake foundation.
-
-#### What I did
-
-* Added a synthetic data generator to create operational datasets (products, stores, suppliers, sales, inventory, shipments).
-* Wrote an S3 upload path that supports dimension uploads and date-partitioned fact data.
-* Built CloudFormation templates for the AWS footprint (S3 + Glue + Athena + IAM).
-
-#### Evidence (synthetic data + upload scripts)
-
-* Generator: `scripts/01_generate_synthetic_data.py`
-* Outputs: `data/synthetic/*.csv`
-* Upload script: `scripts/02_upload_to_s3.py`
-* Week 2 Athena Query example
-
-![Week 2 Athena Query example](output/week2-Athena-GLUE-S3/query_row_count_all_tabkes.png)
-
-#### Evidence (CloudFormation)
-
-* Templates: `infrastructure/cfn/retops-*.yaml`
-* Deploy script: `infrastructure/deploy-all-cfn-stacks.sh`
-
-
-### Week 3 — dbt transformation layer (planned)
-
-Goal: expand modeling beyond one mart and formalize transformations (more marts, clearer grains, tests).
-
-Planned deliverables:
-
-* More marts (inventory daily, supplier performance, order fulfillment)
-* dbt tests (not null, unique, relationships)
-* Documentation and model contracts (where useful)
-
-
-
-### Week 4 — Orchestration + monitoring (planned)
-### Week 5 — Analytics + BI layer (planned)
-### Week 6 — ML (demand forecasting) (planned)
+* infrastructure
+* dbt_athena
+* lambda_functions
+* scripts
+* experiments
