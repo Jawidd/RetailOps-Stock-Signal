@@ -16,25 +16,28 @@ Started with the Kaggle Favorita dataset (grocery sales from Ecuador). Used it t
 
 **DuckDB phase**:
 
-* Loaded CSVs into DuckDB (fast for analytics)
+* Loaded CSVs into DuckDB (fast for analytical queries)
 * Built cleaning scripts, ran quality checks
 * Created fact tables and tested them
+* Found DuckDB doesn't integrate well with Metabase
 
 **dbt (Postgres) phase**:
 
 * Set up Postgres in Docker
 * Built 6 staging models and a daily sales mart
-* Connected to Metabase, created dashboards
+* Connected to Metabase, created business dashboards
+* Validated dimensional modeling approach
 
 ![Week 1 Metabase dashboard](output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png)
 
 **R pipeline phase**:
 
-* Data availability and quality checks
-* Statistical profiling with `pg_stats`
-* Data cleaning across all tables
-* Data quality tests (uniqueness, NOT NULL, relationships, ranges)
-* Generated analysis and an HTML report
+* Data availability check (row counts, missing tables)
+* Data quality analysis and profiling with `pg_stats`
+* Comprehensive cleaning across tables
+* Data quality tests: uniqueness, NOT NULL, relationships, ranges
+* Built daily sales mart with R aggregations
+* Generated an HTML report with visualizations
 
 All this work is preserved in `experiments/favorita-r-pipeline/` with full R scripts and outputs.
 
@@ -48,21 +51,22 @@ Built the foundation on AWS. Everything as code with CloudFormation.
 **S3 data lake**:
 
 * Bucket with versioning and encryption (AES256)
-* Lifecycle policies for cost control
-* Zones: `raw/`, `curated/`, `metadata/`
+* Lifecycle policies (raw transitions to IA after 30 days, staged after 90 days)
+* Three zones: `raw/`, `curated/`, `metadata/`
 * Public access blocked
 
 **Glue catalog + Athena**:
 
-* Glue database pointing to S3
-* 3 dimensions + 3 partitioned facts
-* Partition projection enabled (no crawlers)
-* Dedicated Athena workgroup with encrypted results and metrics
+* Glue database `retailops` pointing to S3 data lake
+* 3 dimension tables + 3 fact tables partitioned by `dt=YYYY-MM-DD`
+* Partition projection configured (range 2024-07-01 to NOW)
+* Dedicated Athena workgroup with enforced output location and SSE_S3 encryption
 
 **Data upload**:
 
-* Idempotent upload script
+* Idempotent upload script with S3 existence checks
 * Dimensions overwrite, facts partition by date and skip existing partitions
+* Metadata attached to S3 objects (timestamps, row counts)
 
 Verified everything worked by querying in Athena:
 
@@ -70,35 +74,38 @@ Verified everything worked by querying in Athena:
 
 ### Week 3: dbt Transformation Layer
 
-Migrated dbt from Postgres to Athena and built dimensional models.
+Migrated dbt from Postgres to Athena. Built dimensional models.
+
+**Setup**:
 
 * Installed `dbt-athena-community==1.8.2`
-* 6 staging models (casts, null handling, dedup shipments)
-* Marts: `dim_date`, `dim_products`, `dim_stores`, `fct_daily_sales`, `fct_inventory_snapshots`, `mart_supplier_performance`
+* Configured profiles with IAM role auth (no hardcoded credentials)
+
+**Models + tests**:
+
+* 6 staging models (casts, nulls, dedup shipments)
+* Marts: dims + facts + supplier performance
 * Tests for keys, grain, relationships, and business rules
 
 ### Week 4: Orchestration with Step Functions
 
-Automated the pipeline end-to-end.
+Automated the entire pipeline end-to-end.
 
-* Lambda generates daily raw partitions
+* EventBridge schedule triggers Step Functions daily
+* Lambda generates new partitions for a date
 * ECS runs dbt (run + test)
-* Athena validation query
-* SNS notifications
-* EventBridge schedule (daily)
+* Athena validation query runs after dbt
+* SNS emails results
 
-## Current State
+## Design Decisions
 
-**What works**:
+**Why Athena?**: Serverless and cheap for this scale.
 
-* Daily pipeline running successfully
-* Data queryable in Athena
-* Email alerts when things break
+**Why ECS for dbt?**: More control than Lambda for dbt runs and logs.
 
-**What's next**:
+**Why Step Functions?**: Native AWS integrations and easy monitoring.
 
-* Dashboards for business users
-* Demand forecasting model
+**Why partition projection?**: Fast date-filtered queries without crawlers.
 
 ## Setup
 
