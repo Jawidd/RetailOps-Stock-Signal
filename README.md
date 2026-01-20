@@ -32,10 +32,9 @@ Started with the Kaggle Favorita dataset (grocery sales from Ecuador). Used it t
 
 **R pipeline phase**:
 
-* Data availability check (row counts, missing tables)
-* Data quality analysis and profiling with `pg_stats`
-* Comprehensive cleaning across tables
-* Data quality tests: uniqueness, NOT NULL, relationships, ranges
+* Data availability and data quality checks
+* Statistical profiling with `pg_stats`
+* Data cleaning + tests (keys, not-null, relationships, ranges)
 * Built daily sales mart with R aggregations
 * Generated an HTML report with visualizations
 
@@ -53,20 +52,20 @@ Built the foundation on AWS. Everything as code with CloudFormation.
 * Bucket with versioning and encryption (AES256)
 * Lifecycle policies (raw transitions to IA after 30 days, staged after 90 days)
 * Three zones: `raw/`, `curated/`, `metadata/`
-* Public access blocked
+* Public access blocked, objects encrypted
 
 **Glue catalog + Athena**:
 
-* Glue database `retailops` pointing to S3 data lake
-* 3 dimension tables + 3 fact tables partitioned by `dt=YYYY-MM-DD`
-* Partition projection configured (range 2024-07-01 to NOW)
-* Dedicated Athena workgroup with enforced output location and SSE_S3 encryption
+* Glue database pointing to S3
+* 3 dimensions + 3 facts partitioned by `dt=YYYY-MM-DD`
+* Partition projection enabled (range 2024-07-01 to NOW)
+* Athena workgroup with enforced output location + SSE_S3
 
 **Data upload**:
 
-* Idempotent upload script with S3 existence checks
+* Idempotent upload script with existence checks
 * Dimensions overwrite, facts partition by date and skip existing partitions
-* Metadata attached to S3 objects (timestamps, row counts)
+* S3 object metadata (timestamps, row counts, table type)
 
 Verified everything worked by querying in Athena:
 
@@ -74,38 +73,41 @@ Verified everything worked by querying in Athena:
 
 ### Week 3: dbt Transformation Layer
 
-Migrated dbt from Postgres to Athena. Built dimensional models.
+Migrated dbt from Postgres to Athena. Built proper dimensional models.
 
 **Setup**:
 
 * Installed `dbt-athena-community==1.8.2`
-* Configured profiles with IAM role auth (no hardcoded credentials)
+* Profiles use IAM role auth
 
-**Models + tests**:
+**Staging + marts**:
 
-* 6 staging models (casts, nulls, dedup shipments)
-* Marts: dims + facts + supplier performance
+* 6 staging models (casts, null handling, dedup shipments)
+* 6 mart models (dims + facts + supplier performance)
 * Tests for keys, grain, relationships, and business rules
 
 ### Week 4: Orchestration with Step Functions
 
 Automated the entire pipeline end-to-end.
 
-* EventBridge schedule triggers Step Functions daily
-* Lambda generates new partitions for a date
+* EventBridge schedule → Step Functions
+* Lambda generates daily partitions
 * ECS runs dbt (run + test)
-* Athena validation query runs after dbt
-* SNS emails results
+* Athena validation query
+* SNS notifications
 
-## Design Decisions
+## Current State
 
-**Why Athena?**: Serverless and cheap for this scale.
+**What works**:
 
-**Why ECS for dbt?**: More control than Lambda for dbt runs and logs.
+* Daily pipeline running successfully
+* Data queryable in Athena
+* Email alerts when things break
 
-**Why Step Functions?**: Native AWS integrations and easy monitoring.
+**What's next**:
 
-**Why partition projection?**: Fast date-filtered queries without crawlers.
+* Metabase dashboards for business users
+* Demand forecasting model
 
 ## Setup
 
@@ -123,6 +125,13 @@ cd scripts
 ./03_upload_dbt_project_to_s3.sh
 ```
 
+Build and push Lambda image:
+
+```bash
+cd lambda_functions/data_generator
+./push_image.sh
+```
+
 Trigger manually:
 
 ```bash
@@ -130,3 +139,16 @@ aws stepfunctions start-execution \
   --state-machine-arn <arn> \
   --input '{"date":"2025-01-18"}'
 ```
+
+## Repository Structure
+
+```
+infrastructure/cfn/
+dbt_athena/models/
+lambda_functions/
+scripts/
+experiments/
+  └── favorita-r-pipeline/
+```
+
+Built this to learn by doing. Made mistakes, fixed them, learned what matters.
