@@ -276,7 +276,7 @@ Resources:
       Name: !Sub "${ProjectNameInput}-daily-trigger"
       Description: "Trigger RetailOps pipeline daily at 06:00 UTC"
       ScheduleExpression: "cron(0 6 * * ? *)"
-      State: ENABLED
+      State: DISABLED   # TEMPORARILY DISABLED to reduce costs to ~0 (no scheduled executions)
       Targets:
         - Id: !Sub "${ProjectNameInput}-daily-pipeline-target"
           Arn: !GetAtt RetailOpsPipelineStateMachine.Arn
