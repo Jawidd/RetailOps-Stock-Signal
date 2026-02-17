@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - ECR repo + IAM roles for ML pipeline ECS task
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: retailops
+
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  MlRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${ProjectNameInput}-${Env}-ml-pipeline"
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
+
+
+
+Outputs:
+  MlRepoUri:
+    Description: ECR repository URI for ML pipeline image
+    Value: !GetAtt MlRepo.RepositoryUri
+    Export:
+      Name: retailops-MlRepoUri
+
+  MlImageUri:
+    Description: ECR image URI (repo:latest)
+    Value: !Sub "${MlRepo.RepositoryUri}:latest"
+    Export:
+      Name: retailops-MlImageUri

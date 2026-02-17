@@ -33,3 +33,4 @@ experiments/favorita_data/*
 infrastructure/cfn/merge.sh
 infrastructure/cfn/all-retops-cfn.yaml
 
+week5-PLAN.md
