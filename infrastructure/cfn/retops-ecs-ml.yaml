@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: RetailOps - ML ECS log group (Step 1)
+
+Parameters:
+  ProjectNameInput:
+    Type: String
+    Default: retailops
+
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  MlLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${ProjectNameInput}/${Env}/ml"
+      RetentionInDays: 14
+
+Outputs:
+  MlLogGroupName:
+    Value: !Ref MlLogGroup
+    Export:
+      Name: retailops-MlLogGroupName
