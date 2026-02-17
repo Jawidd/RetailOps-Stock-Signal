@@ -43,6 +43,71 @@ Resources:
         - Key: ManagedBy
           Value: cloudformation
 
+  MlTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-${Env}-ml-task-role"
+      Path: !Sub "/retailops/${Env}/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${ProjectNameInput}-${Env}-ml-athena-s3-glue"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Data lake bucket (read marts, write predictions/features/models)
+              - Effect: Allow
+                Action: [ "s3:ListBucket", "s3:GetBucketLocation" ]
+                Resource: !ImportValue retailops-DataLakeBucketARN
+              - Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject", "s3:DeleteObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue retailops-DataLakeBucketARN
+
+              # Athena results bucket
+              - Effect: Allow
+                Action: [ "s3:ListBucket", "s3:GetBucketLocation" ]
+                Resource: !ImportValue AthenaQueryResultsBucketARN
+              - Effect: Allow
+                Action: [ "s3:GetObject", "s3:PutObject", "s3:DeleteObject" ]
+                Resource:
+                  - !Sub
+                    - "${BucketArn}/*"
+                    - BucketArn: !ImportValue AthenaQueryResultsBucketARN
+
+              # Athena query execution
+              - Effect: Allow
+                Action:
+                  - athena:StartQueryExecution
+                  - athena:GetQueryExecution
+                  - athena:GetQueryResults
+                  - athena:StopQueryExecution
+                  - athena:GetWorkGroup
+                Resource: "*"
+
+              # Glue catalog read (query mart tables)
+              - Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:GetTableVersions
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                Resource: "*"
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
+
 Outputs:
   MlRepoUri:
     Description: ECR repository URI for ML pipeline image
@@ -55,9 +120,15 @@ Outputs:
     Value: !Sub "${MlRepo.RepositoryUri}:latest"
     Export:
       Name: retailops-MlImageUri
-      
+
   MlTaskExecutionRoleArn:
     Description: ML task execution role ARN
     Value: !GetAtt MlTaskExecutionRole.Arn
     Export:
       Name: retailops-MlTaskExecutionRoleArn
+
+  MlTaskRoleArn:
+    Description: ML task role ARN
+    Value: !GetAtt MlTaskRole.Arn
+    Export:
+      Name: retailops-MlTaskRoleArn

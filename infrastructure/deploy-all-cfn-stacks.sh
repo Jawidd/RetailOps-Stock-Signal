@@ -20,6 +20,7 @@ STACK_FILES=(
    "retops-athena.yaml"
    "retops-iam.yaml"
    "retops-ecr-data-generator.yaml"
+   "retops-ecr-ml.yaml"                   # week5: ECR + IAM for ML
    "retops-lambda-data-generator.yaml"
    "retops-ecs-dbt.yaml"
    "retops-step-functions.yaml"
