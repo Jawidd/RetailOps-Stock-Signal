@@ -24,7 +24,24 @@ Resources:
         - Key: ManagedBy
           Value: cloudformation
 
-
+  MlTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectNameInput}-${Env}-ml-task-exec-role"
+      Path: !Sub "/retailops/${Env}/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectNameInput
+        - Key: ManagedBy
+          Value: cloudformation
 
 Outputs:
   MlRepoUri:
@@ -38,3 +55,9 @@ Outputs:
     Value: !Sub "${MlRepo.RepositoryUri}:latest"
     Export:
       Name: retailops-MlImageUri
+      
+  MlTaskExecutionRoleArn:
+    Description: ML task execution role ARN
+    Value: !GetAtt MlTaskExecutionRole.Arn
+    Export:
+      Name: retailops-MlTaskExecutionRoleArn
