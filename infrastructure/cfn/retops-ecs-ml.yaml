@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: RetailOps - ML ECS log group (Step 1)
+Description: RetailOps - ECS Fargate task skeleton for ML pipeline (Step 2)
 
 Parameters:
   ProjectNameInput:
@@ -12,14 +12,45 @@ Parameters:
     AllowedValues: [dev, prod]
 
 Resources:
-  MlLogGroup:
-    Type: AWS::Logs::LogGroup
+  MlTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
     Properties:
-      LogGroupName: !Sub "/ecs/${ProjectNameInput}/${Env}/ml"
-      RetentionInDays: 14
+      Family: !Sub "${ProjectNameInput}-${Env}-ml-task"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [ FARGATE ]
+      Cpu: "2048"
+      Memory: "4096"
+      EphemeralStorage:
+        SizeInGiB: 40
+      ExecutionRoleArn: !ImportValue retailops-MlTaskExecutionRoleArn
+      TaskRoleArn: !ImportValue retailops-MlTaskRoleArn
+      ContainerDefinitions:
+        - Name: ml
+          Image: !ImportValue retailops-MlImageUri
+          Essential: true
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
+            - Name: DATALAKE_BUCKET
+              Value: !ImportValue retailops-DataLakeBucketName
+            - Name: ATHENA_RESULTS_BUCKET
+              Value: !ImportValue AthenaQueryResultsBucketName
+            - Name: ATHENA_WORKGROUP
+              Value: !ImportValue retailops-AthenaWorkGroupName
+            - Name: ATHENA_DATABASE
+              Value: retailops
+            - Name: PIPELINE_DATE
+              Value: ""
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !ImportValue retailops-MlLogGroupName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ml
 
 Outputs:
-  MlLogGroupName:
-    Value: !Ref MlLogGroup
+  MlTaskDefinitionFamily:
+    Description: ECS ML task family (skeleton)
+    Value: !Sub "${ProjectNameInput}-${Env}-ml-task"
     Export:
-      Name: retailops-MlLogGroupName
+      Name: retailops-MlTaskDefinitionFamily
