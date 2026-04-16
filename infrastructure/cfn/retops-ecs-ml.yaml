@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: RetailOps - ECS Fargate task skeleton for ML pipeline (Step 2)
+Description: RetailOps - ECS Fargate task definition for running ML pipeline
 
 Parameters:
   ProjectNameInput:
@@ -12,6 +12,12 @@ Parameters:
     AllowedValues: [dev, prod]
 
 Resources:
+  MlLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${ProjectNameInput}/${Env}/ml"
+      RetentionInDays: 14
+
   MlTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -27,6 +33,7 @@ Resources:
       ContainerDefinitions:
         - Name: ml
           Image: !ImportValue retailops-MlImageUri
+          StopTimeout: 120
           Essential: true
           Environment:
             - Name: AWS_DEFAULT_REGION
@@ -39,18 +46,80 @@ Resources:
               Value: !ImportValue retailops-AthenaWorkGroupName
             - Name: ATHENA_DATABASE
               Value: retailops
+            # PIPELINE_DATE is overridden by Step Functions ContainerOverrides
             - Name: PIPELINE_DATE
               Value: ""
+          Command:
+            - bash
+            - -lc
+            - |
+                set -euo pipefail
+
+                echo "=== ML Pipeline Boot ==="
+                echo "PIPELINE_DATE=${PIPELINE_DATE:-not set}"
+                echo "DATALAKE_BUCKET=${DATALAKE_BUCKET}"
+                echo "ATHENA_WORKGROUP=${ATHENA_WORKGROUP}"
+
+                mkdir -p /tmp/ml_pipeline
+
+                echo "=== Downloading ML code from S3 ==="
+                python - <<'PY'
+                import os, boto3
+                s3 = boto3.client("s3")
+                bucket = os.environ["DATALAKE_BUCKET"]
+                key = "metadata/ml/ml_pipeline.zip"
+                s3.download_file(bucket, key, "/tmp/ml_pipeline.zip")
+                print(f"Downloaded s3://{bucket}/{key}")
+                PY
+
+                echo "=== Extracting ML code ==="
+                set +e
+                unzip -o /tmp/ml_pipeline.zip -d /tmp/ml_pipeline > /tmp/unzip.log 2>&1
+                rc=$?
+                set -e
+                tail -n 40 /tmp/unzip.log
+                echo "unzip rc=$rc"
+                if [ "$rc" -gt 1 ]; then exit "$rc"; fi
+
+                echo "=== Extracted layout ==="
+                find /tmp/ml_pipeline -maxdepth 3 -type f -print | head -n 30
+
+                PIPELINE_DIR="/tmp/ml_pipeline/ml_pipeline"
+                if [ ! -f "$PIPELINE_DIR/run_pipeline.py" ]; then
+                  # Handle case where zip doesn't have top-level folder
+                  PIPELINE_DIR="/tmp/ml_pipeline"
+                fi
+                echo "PIPELINE_DIR=$PIPELINE_DIR"
+                ls -la "$PIPELINE_DIR"
+                test -f "$PIPELINE_DIR/run_pipeline.py"
+
+                echo "=== Running ML pipeline ==="
+                cd "$PIPELINE_DIR"
+
+                DATE_ARG=""
+                if [ -n "${PIPELINE_DATE:-}" ]; then
+                  DATE_ARG="--date ${PIPELINE_DATE}"
+                fi
+
+                python run_pipeline.py $DATE_ARG
+
+                echo "=== ML Pipeline Complete ==="
+
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !ImportValue retailops-MlLogGroupName
+              awslogs-group: !Ref MlLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ml
 
 Outputs:
+  MlLogGroupName:
+    Value: !Ref MlLogGroup
+    Export:
+      Name: retailops-MlLogGroupName
+
   MlTaskDefinitionFamily:
-    Description: ECS ML task family (skeleton)
+    Description: Stable ML task definition identifier (family name). Always uses latest active revision.
     Value: !Sub "${ProjectNameInput}-${Env}-ml-task"
     Export:
       Name: retailops-MlTaskDefinitionFamily
