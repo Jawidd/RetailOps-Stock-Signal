@@ -172,6 +172,11 @@ scripts/
 ├── 03_upload_dbt_project_to_s3.sh      # Zips and uploads dbt project to S3 for ECS
 └── show_schema_tables.py               # Utility: list Athena tables and schemas
 
+analytics/
+├── stockout_risk.py            # Stockout risk scoring model (queries Athena mart tables)
+├── stockout_risk_output.csv    # Generated: ranked store × product risk table
+└── supplier_quadrants.csv      # Generated: supplier 2×2 reliability segmentation
+
 data/synthetic/                 # Local reference copies of dimension CSVs
 experiments/                    # Exploratory work (Favorita dataset, R pipeline, Postgres dbt)
 output/                         # Screenshots and query results from validation runs
@@ -298,6 +303,79 @@ Partition projection is configured directly in the Glue table definition with a 
 
 **Synthetic data**
 The platform requires sales, inventory, and shipment data with consistent foreign keys across all three domains. No public dataset provides this combination. A Python generator produces realistic correlated data with controllable volume and date ranges, enabling deterministic testing of the full pipeline.
+
+---
+
+## Analytical Layer — Stockout Risk Scoring
+
+### Business Question
+
+Which store × product combinations are most likely to stock out before the next replenishment arrives, given current inventory levels, recent demand velocity, and supplier lead time?
+
+### Deliverable
+
+`analytics/stockout_risk.py` — queries the three Athena mart tables built by this pipeline and produces a ranked table of stockout risk, plus a supplier reliability segmentation.
+
+```bash
+pip install boto3 pandas numpy python-dotenv
+python analytics/stockout_risk.py
+```
+
+Outputs:
+- `analytics/stockout_risk_output.csv` — every store × product combination ranked by risk score
+- `analytics/supplier_quadrants.csv` — supplier segmentation by on-time rate vs fill rate
+
+### Formula
+
+```
+days_of_stock_remaining  = max(quantity_on_hand, 0) / avg_daily_demand
+expected_replenishment   = avg_actual_lead_time_days / calculated_on_time_rate
+risk_score               = expected_replenishment - days_of_stock_remaining
+```
+
+A **positive score** means the stock is expected to run out before the next shipment arrives. A **negative score** means current stock will outlast the replenishment window.
+
+**Why each term:**
+- `max(quantity_on_hand, 0)` — the generator occasionally produces negative on-hand values (a data quality artefact). Clipping to zero treats them as already stocked-out rather than inflating days-of-stock.
+- `avg_daily_demand` over 30 days — smooths day-to-day noise and matches the window a procurement team would review.
+- `avg_actual_lead_time_days / calculated_on_time_rate` — penalises unreliable suppliers. A supplier with a 10-day lead time and 50 % on-time rate is effectively a 20-day supplier from a planning perspective. This uses `calculated_on_time_rate` from `mart_supplier_performance`, which is derived from actual shipment records, not the master-data field.
+
+### Inputs (Athena mart tables)
+
+| Table | What it provides |
+|---|---|
+| `retailops.fct_daily_sales` | `avg_daily_demand` — sum of `quantity_sold` over trailing 30 days, divided by 30 |
+| `retailops.fct_inventory_snapshots` | `quantity_on_hand`, `reorder_point`, `quantity_on_order` at the latest snapshot date |
+| `retailops.mart_supplier_performance` | `avg_actual_lead_time_days`, `calculated_on_time_rate`, `avg_fill_rate` per supplier |
+| `retailops.dim_products` | `supplier_id` — joins products to their supplier |
+
+### Limitations
+
+- **Synthetic data**: demand is generated with fixed multipliers, not real seasonality, so the 30-day trailing average is a reasonable but flat proxy.
+- **No demand forecasting**: the score uses trailing average demand, not a forward-looking forecast. A demand spike the day after scoring would not be captured.
+- **Lead time is an average, not a distribution**: using `avg_actual_lead_time_days` ignores variance. A supplier with a mean of 10 days but high variance is riskier than the score implies.
+- **No safety-stock term**: `reorder_point` already encodes a safety buffer in the data model, but the risk score does not explicitly incorporate it — it scores against zero stock, not against the reorder threshold.
+
+### What would change with real data
+
+- Replace average lead time with a Bayesian posterior over the lead-time distribution (e.g. log-normal) to produce a probabilistic stockout date with confidence intervals.
+- Replace trailing-average demand with seasonal decomposition or simple exponential smoothing that respects day-of-week and promotional patterns.
+- Incorporate `reorder_point` directly into the score: flag combinations where `days_of_stock_remaining < expected_replenishment_days` **and** `quantity_on_hand < reorder_point` as the highest-priority tier.
+
+### Supplier Reliability Segmentation (stretch)
+
+The script also segments all suppliers into a 2×2 quadrant using `calculated_on_time_rate` vs `avg_fill_rate` from `mart_supplier_performance`, split at the median of each dimension.
+
+| Quadrant | On-time rate | Fill rate | Procurement action |
+|---|---|---|---|
+| Q1: Preferred | High | High | Lock in volume commitments; use for high-velocity SKUs |
+| Q2: Reliable but under-delivering | High | Low | Investigate partial shipment root cause; increase order quantities |
+| Q3: Slow but complete | Low | High | Add buffer stock; use for low-velocity SKUs with long lead tolerance |
+| Q4: Renegotiate or replace | Low | Low | Dual-source immediately; issue performance-improvement notice |
+
+**Q1 suppliers** deliver on schedule and ship complete orders. They are the lowest operational risk in the supply chain and should be prioritised for volume commitments and long-term contracts. In this dataset, their `calculated_on_time_rate` (derived from actual shipment records) is consistent with the master-data `on_time_delivery_rate`, which the 53 dbt tests validate. Procurement action: lock in preferred-supplier status, negotiate volume discounts, and assign them as the primary source for any store × product combination appearing in the top 25 of the stockout risk table.
+
+**Q4 suppliers** are doubly penalised in the risk score: their low on-time rate inflates `expected_replenishment_days`, and their low fill rate means even when they do arrive, orders are incomplete. Any store × product combination that depends on a Q4 supplier and carries a positive `risk_score` should be treated as a priority escalation. Procurement action: dual-source immediately with a Q1 supplier, issue a formal performance-improvement notice, and set a 90-day review gate. A large negative `on_time_rate_variance` in `mart_supplier_performance` (calculated rate much lower than the master-data rate) is an additional red flag that the supplier may be misreporting performance in their own systems.
 
 ---
 
