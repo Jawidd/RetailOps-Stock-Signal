@@ -1,468 +1,325 @@
 # RetailOps Data Platform
 
-A retail analytics platform on AWS that I built to learn data engineering. Started with real data to understand the problem, then moved to synthetic data I could control. Built the whole thing: infrastructure, pipelines, transformations, orchestration.
 
-**Stack**: S3, Glue, Athena, Lambda, ECS Fargate, Step Functions, dbt, CloudFormation
+## Summary
 
-## Why This Project
+This platform automatically generates and processes retail business data every day — tracking sales, stock levels, and supplier shipments across stores. It cleans and organizes that data into structured reports that answer questions like: which products are selling, which suppliers are reliable, and where inventory is running low. The entire system runs on AWS, starts itself on a schedule, sends an email if anything goes wrong, and costs roughly $10/month to operate.
 
-I wanted to build something real - not just follow a tutorial. Something that shows I can design infrastructure, write good SQL, automate pipelines, and think about what actually matters in production.
 
-## What I Did
 
-### Week 1: Understanding the Domain (Favorita Dataset)
+---
 
-Started with the Kaggle Favorita dataset (grocery sales from Ecuador). Used it to understand retail analytics requirements and prove I could handle real messy data.
+## Technical Summary
 
-**DuckDB phase**:
+A serverless retail analytics platform on AWS, fully automated and deployed as infrastructure-as-code across 9 CloudFormation stacks. A containerized Lambda function generates daily synthetic retail data (sales, inventory, shipments) and uploads it to a partitioned S3 data lake. AWS Step Functions orchestrates the end-to-end pipeline: Lambda → ECS Fargate (dbt) → Athena validation → SNS notification. dbt transforms raw CSV data into Parquet-backed dimensional models (Kimball-style) in Athena, with 53 automated data quality tests enforcing schema contracts, referential integrity, and business rules. CloudWatch monitors pipeline health with a failure alarm wired to SNS email alerts.
 
-* Loaded CSVs into DuckDB (fast for analytical queries)
-* Built cleaning scripts, ran quality checks
-* Created fact tables and tested them
-* Found DuckDB doesn't integrate well with Metabase
+**Stack:** AWS Lambda · ECS Fargate · Step Functions · S3 · Glue Data Catalog · Athena · dbt-athena · CloudFormation · CloudWatch · SNS · ECR
 
-**dbt (Postgres) phase**:
+---
 
-* Set up Postgres in Docker
-* Built 6 staging models and a daily sales mart
-* Connected to Metabase, created business dashboards
-* Validated dimensional modeling approach
-
-![Week 1 Metabase dashboard](output/week1-dbt-metabase/Metabase_Mart_daily_sales_Dash.png)
-
-**R pipeline phase**:
-
-* Data availability checks (row counts, missing tables)
-* Data quality analysis using `DBI`, `RPostgres`, `dplyr`
-* Statistical profiling with `pg_stats` (null fractions, distinct values, correlations)
-* Comprehensive data cleaning:
-
-  * Holiday events: parsed dates, classified event types
-  * Items: handled categorical data, perishable flags
-  * Oil prices: calculated price changes and trends
-  * Stores: cleaned geography and store types
-  * Transactions: validated daily transaction counts
-  * Train/Test: engineered features (day of week, wage days, earthquake period)
-* Data quality tests:
-
-  * Uniqueness tests for primary keys
-  * NOT NULL constraints
-  * Referential integrity (foreign keys)
-  * Range validation (quantities, prices)
-  * Date range checks
-* Built daily sales mart with R aggregations
-* Generated analysis and HTML report with visualizations
-
-All this work is preserved in `experiments/favorita-r-pipeline/` with full R scripts and outputs.
-
-**Why I moved to synthetic data**:
-The Favorita dataset has sales and products, but no inventory tracking, no suppliers, no shipments. Couldn't build a complete retail ops platform without supply chain data. So I wrote a Python generator to create realistic data with all the operational pieces I needed.
-
-### Week 2: AWS Data Lake
-
-Built the foundation on AWS. Everything as code with CloudFormation.
-
-**S3 data lake** (`retops-s3datalake.yaml`):
-
-* Bucket with versioning and encryption (AES256)
-* Lifecycle policies (raw data transitions to IA after 30 days, staged after 90 days)
-* Three zones: `raw/`, `curated/`, `metadata/`
-* Public access blocked, all objects encrypted
-
-**Glue catalog** (`retops-athena.yaml`):
-
-* Created Glue database `retailops` pointing to S3 data lake
-* 3 dimension tables: products, stores, suppliers (non-partitioned, stored in `raw/products/`, etc.)
-* 3 fact tables: sales, inventory, shipments (partitioned by `dt=YYYY-MM-DD`)
-* Partition projection configuration:
-
-  * Type: date
-  * Range: 2024-07-01 to NOW
-  * Format: yyyy-MM-dd
-  * Template: `s3://bucket/raw/sales/dt=${dt}/`
-* All tables use OpenCSVSerde with proper quote/escape handling
-* Created dedicated Athena workgroup with:
-
-  * Query results bucket
-  * Enforced output location
-  * SSE_S3 encryption
-  * CloudWatch metrics enabled
-
-**IAM roles** (`retops-iam.yaml`):
-
-* Pipeline role assumable by `ouadmin` user
-* Least privilege permissions:
-
-  * S3 data lake: ListBucket, GetBucketLocation, GetObject, PutObject
-  * Athena results: ListBucket, GetBucketLocation, GetObject, PutObject, DeleteObject
-  * Athena: StartQueryExecution, GetQueryExecution, GetQueryResults, StopQueryExecution, GetWorkGroup
-  * Glue: GetDatabase, GetDatabases, GetTable, GetTables, GetPartition, GetPartitions
-
-**Data upload** (`02_upload_raw_data_to_s3.py`):
-
-* Idempotent upload script with S3 object existence checks
-* Dimensions: single CSV per table (overwrites if exists)
-* Facts: partitioned by date, skips existing partitions
-* Metadata attached to S3 objects (upload timestamp, row counts, table type)
-* Handled all 6 tables (3 dimensions + 3 facts)
-
-Verified everything worked by querying in Athena:
-
-![Athena query results](output/week2-Athena-GLUE-S3/query_row_count_all_tabkes.png)
-
-### Week 3: dbt Transformation Layer
-
-Migrated dbt from Postgres to Athena. Built proper dimensional models.
-
-**Setup**:
-
-* Installed `dbt-athena-community==1.8.2`
-* Configured profiles with IAM role authentication (no hardcoded credentials)
-* Set project to output Parquet with Snappy compression
-* Configured Athena workgroup and S3 staging directory
-* Added dbt to Docker with persistent `~/.dbt` profiles
-
-**Staging models** (6 models):
-
-* `stg_products` - cast types, handle nulls in supplier_id
-* `stg_stores` - clean store attributes
-* `stg_suppliers` - parse lead times and on-time rates
-* `stg_sales` - cast numeric fields, handle discount nulls
-* `stg_inventory` - handle negative quantities (data quality issue)
-* `stg_shipments` - deduplicate 29 duplicate shipment_ids, cast dates
-* Light transformations only: type casting, null handling, derived flags
-* Materialized as views (no data duplication in staging)
-
-**Source tests** (20+ tests):
-
-* NOT NULL on all primary keys
-* Unique constraints on dimension keys
-* Relationships (foreign keys) validated
-* Accepted values for categorical fields
-
-**Mart models** (6 models):
-
-* `dim_date` - calendar dimension (2024-07-01 to 2026-12-31)
-
-  * Day/week/month/quarter/year attributes
-  * Day of week names
-  * Weekend flags
-  * Fiscal attributes
-* `dim_products` - product dimension with supplier denormalization
-
-  * Product attributes
-  * Category/subcategory
-  * Cost and pricing
-  * Supplier details (name, country, lead time)
-* `dim_stores` - store master
-
-  * Store attributes
-  * Geography (region)
-  * Store type and cluster
-* `fct_daily_sales` - sales fact (store-product-day grain)
-
-  * Quantity sold
-  * Pricing and discounts
-  * Total sales amount
-  * Profit calculations
-  * Foreign keys to all dimensions
-* `fct_inventory_snapshots` - inventory fact (store-product-day grain)
-
-  * Quantity on hand
-  * Quantity on order
-  * Reorder points
-  * Inventory value calculations
-  * Stockout flags
-* `mart_supplier_performance` - aggregated supplier metrics
-
-  * Total shipments and orders
-  * On-time delivery rate
-  * Fill rate (quantity received vs ordered)
-  * Average lead time
-  * Late shipment counts
-
-All marts materialized as Parquet tables in `curated/` zone.
-
-**Tests** (53 total, all passing):
-
-* Primary key uniqueness for all dimensions
-* Grain validation for facts (unique date-store-product combinations)
-* Foreign key relationships (all references valid)
-* Business rules:
-
-  * Quantities >= 0
-  * Prices > 0
-  * Dates in valid ranges
-  * Lead times positive
-  * Rates between 0 and 1
-
-![Test results](output/week3-Athena-dbt/raw_source_tests_20260115_113851.txt)
-
-**Analysis queries**:
-
-* Revenue and profit by category
-* Top 10 products by sales
-* Store performance rankings
-* Supplier scorecards with ratings
-
-![Executive summary](output/week3-Athena-dbt/executive_summary.png)
-![Top suppliers](output/week3-Athena-dbt/top_suppliers.png)
-
-### Week 4: Orchestration with Step Functions
-
-Automated the entire pipeline end-to-end. This required the most debugging.
-
-**Lambda data generator** (`retops-ecr-data-generator.yaml` + `retops-lambda-data-generator.yaml`):
-
-* ECR repository for Lambda container image
-* IAM role for Lambda with S3 write permissions to data lake
-* Lambda function specification:
-
-  * Package type: Image (not zip)
-  * Architecture: x86_64
-  * Memory: 1024 MB
-  * Timeout: 300 seconds (5 minutes)
-* Container image built with:
-
-  * Python 3.12 base
-  * Data generator code (`app.py`, `generator.py`)
-  * Dependencies: pandas, boto3, numpy
-* Lambda handler reads date from event payload
-* Generates synthetic data for that date:
-
-  * Sales: ~50K rows/day across stores and products
-  * Inventory: ~4K snapshots/day
-  * Shipments: ~200 shipments/day
-* Uploads with partitioning: `raw/sales/dt=YYYY-MM-DD/sales.csv`
-* Returns row counts for validation
-* Fixed bug: initial version created 0 shipments due to inventory logic
-
-**ECS dbt runner** (`retops-ecs-dbt.yaml`):
-
-* ECS Fargate cluster: `retailops-dev-dbt-cluster`
-* CloudWatch log group: `/ecs/retailops/dev/dbt` (14 day retention)
-* Task execution role (for pulling images, writing logs)
-* Task role with permissions:
-
-  * S3 data lake: ListBucket, GetObject, PutObject, DeleteObject
-  * Athena results bucket: same as above
-  * Athena: all query execution actions
-  * Glue: full catalog access (create/update/delete tables)
-* Task definition:
-
-  * Fargate, 1 vCPU, 2 GB memory
-  * 40 GB ephemeral storage
-  * Custom Docker image: `retailops-dbt-athena:1.8.2`
-
-    * Base: python:3.12-slim
-    * Installed: dbt-core==1.8.2, dbt-athena-community==1.8.2, boto3
-  * Container command:
-
-    1. Install boto3 for S3 downloads
-    2. Create dbt profiles.yml with Athena config
-    3. Download dbt project zip from S3 (`metadata/dbt/dbt_athena.zip`)
-    4. Extract with error handling
-    5. Run `dbt deps`
-    6. Run `dbt run` (materializes all models)
-    7. Run `dbt test` (validates data quality)
-  * All output to CloudWatch logs
-
-**Step Functions state machine** (`retops-step-functions.yaml`):
-
-* State machine name: `retailops-daily-pipeline`
-
-* 6 states:
-
-  1. **ExtractDate**: Parse date from EventBridge time field
-  2. **GenerateData**: Invoke Lambda with parsed date
-
-     * Resource: `arn:aws:states:::lambda:invoke`
-     * Catch errors → jump to NotifyFailure
-  3. **RunDbt**: Execute ECS task synchronously
-
-     * Resource: `arn:aws:states:::ecs:runTask.sync`
-     * Launch type: FARGATE
-     * Network: 2 subnets + security group + public IP
-     * Waits for task completion
-     * Catch errors → jump to NotifyFailure
-  4. **AthenaValidation**: Run quality check query
-
-     * Resource: `arn:aws:states:::athena:startQueryExecution.sync`
-     * Query: `SELECT max(sale_date), count(*) FROM retailops_marts.fct_daily_sales WHERE sale_date >= current_date - interval '7' day`
-     * Workgroup: retailops-primary
-     * Catch errors → jump to NotifyFailure
-  5. **NotifySuccess**: Publish to SNS success topic
-  6. **NotifyFailure**: Publish to SNS failure topic → FailState
-
-* IAM execution role with permissions:
-
-  * Lambda: InvokeFunction
-  * ECS: RunTask, StopTask, DescribeTasks
-  * IAM: PassRole (for ECS task role)
-  * Athena: StartQueryExecution, GetQueryExecution, GetQueryResults
-  * Glue: GetDatabase, GetTable, GetPartitions
-  * S3: ListBucket, GetObject, PutObject (Athena results bucket)
-  * SNS: Publish (both topics)
-  * EventBridge: PutRule, PutTargets, DescribeRule, DeleteRule, RemoveTargets (for ECS .sync integration)
-
-* SNS topics:
-
-  * Success topic: `retailops-pipeline-success`
-  * Failure topic: `retailops-pipeline-failure`
-  * Email subscription on failure topic
-
-* EventBridge schedule:
-
-  * Cron: `0 6 * * ? *` (daily 6am UTC)
-  * State: ENABLED
-  * Input transformer passes current timestamp to state machine
-
-**Debugging iterations**:
-
-* Step Functions → Lambda: Initially wasn't passing date correctly, fixed with InputPathsMap
-* Step Functions → ECS: `.sync` integration requires EventBridge rule creation permissions
-* ECS container: dbt project unzip was failing silently, added verbose logging and error checking
-* Athena validation: Step Functions role was missing Glue catalog permissions
-* IAM roles: 3 full redeploys to get all cross-service permissions right
-* Lambda: Had to use `--platform linux/amd64` in Docker build for Lambda compatibility
-
-**CloudWatch monitoring** (`retops-cloudwatch.yaml`):
-
-* Dashboard: `retailops-pipeline-health`
-
-  * Widget 1: Step Functions execution metrics (succeeded, failed, started)
-  * Widget 2: Recent dbt errors from logs (filters for ERROR|FAIL)
-* Alarm: `retailops-pipeline-failure`
-
-  * Metric: ExecutionsFailed
-  * Threshold: >= 1
-  * Period: 5 minutes
-  * Action: Publish to failure SNS topic
-
-Pipeline now runs daily:
-
-```
-EventBridge (6am UTC)
-  → Step Functions
-    → Lambda generates data (30 sec)
-    → ECS runs dbt (5 min)
-      → staging models (views)
-      → mart models (Parquet tables)
-      → 53 tests
-    → Athena validates (3 sec)
-    → SNS emails result
-```
-
-### Daily Pipeline Architecture Diagram
-
-To make the orchestration and service interactions clearer, here is the full architecture diagram of the daily pipeline:
+## Architecture Overview
 
 ![RetailOps Daily Pipeline Architecture](_docs/diagrams/Diagram1.svg)
 
-This diagram shows how the services interact end-to-end:
+```
+EventBridge (06:00 UTC daily)
+  └─► Step Functions
+        ├─► Lambda          — generates ~55K rows of synthetic retail data for the day
+        ├─► ECS Fargate     — runs dbt: staging views → Parquet mart tables → 53 tests
+        ├─► Athena          — validates freshness: row count over trailing 7 days
+        └─► SNS             — emails success or failure with execution context
+```
 
-- **Amazon EventBridge** triggering the workflow daily at 6am UTC  
-- **AWS Step Functions** orchestrating the workflow states  
-- **AWS Lambda** generating synthetic retail data  
-- **Amazon S3** storing raw and curated datasets  
-- **Amazon ECS (Fargate)** running dbt transformations  
-- **Amazon Athena** validating and querying transformed data  
-- **Amazon SNS** sending success/failure notifications  
-- **Amazon CloudWatch** collecting logs, metrics, and alarms  
+### Service Rationale
 
-The architecture follows a medallion-style data pattern:
+| Service | Role | Why |
+|---|---|---|
+| **Lambda** | Daily data generation | Stateless, event-driven, no infrastructure to manage |
+| **S3** | Data lake (raw + curated zones) | Durable, cheap, native to Athena/Glue |
+| **Glue Data Catalog** | Schema registry | Partition projection eliminates crawler runs; Athena reads it natively |
+| **Athena** | Query engine + validation | Serverless, pay-per-query, no cluster to maintain |
+| **ECS Fargate** | dbt execution environment | Exceeds Lambda's 15-min timeout; full stdout/stderr in CloudWatch |
+| **Step Functions** | Pipeline orchestration | Native `.sync` integrations with Lambda, ECS, and Athena; visual audit trail |
+| **CloudFormation** | Infrastructure provisioning | All resources version-controlled and reproducible |
+| **CloudWatch** | Logs + metrics + alarms | Centralized observability without additional tooling |
+| **SNS** | Alerting | Decoupled notification layer; email subscription on failure topic |
 
-1. **Raw zone (S3)** — Partitioned synthetic operational data lands daily  
-2. **Staging layer (dbt views)** — Type casting and light transformations  
-3. **Curated zone (Parquet tables)** — Dimensional models and fact tables  
-4. **Validation layer (Athena + dbt tests)** — Data quality and business rule enforcement  
-5. **Monitoring & Alerts (CloudWatch + SNS)** — Operational reliability  
+---
 
-This keeps the system modular, idempotent, production-ready, and fully automated.
+## Data Flow
 
+```
+1. GENERATE   Lambda reads dimension CSVs from S3 (products, stores, suppliers)
+              and generates daily fact data:
+                - raw/sales/dt=YYYY-MM-DD/sales.csv         (~50K rows)
+                - raw/inventory/dt=YYYY-MM-DD/inventory.csv (~4K rows)
+                - raw/shipments/dt=YYYY-MM-DD/shipments.csv (~200 rows)
 
+2. CATALOG    Glue Data Catalog exposes all raw tables to Athena via
+              partition projection (no crawlers, instant partition discovery)
 
-## Current State
+3. TRANSFORM  ECS Fargate pulls the dbt project from S3 (metadata/dbt/dbt_athena.zip),
+              builds profiles.yml at runtime from environment variables, then runs:
+                dbt run   → staging views (type casting, null handling, deduplication)
+                          → mart Parquet tables written to curated/ zone
+                dbt test  → 53 tests across all models
 
-**What works**:
+4. VALIDATE   Step Functions invokes Athena directly to confirm the latest partition
+              is present and row counts are non-zero over the trailing 7 days
 
-* 9 CloudFormation stacks deployed
-* Daily pipeline running successfully
-* 12 dbt models with 53 tests passing
-* Data queryable in Athena (<3 sec queries)
-* Email alerts when things break
+5. NOTIFY     SNS publishes success or failure with the execution date and error context
+```
 
-**What's next**:
+### S3 Zone Layout
 
-* Week 5: Metabase dashboards for business users
-* Week 6: Demand forecasting model
+```
+s3://retailops-data-lake-eu-west-2/
+├── raw/
+│   ├── products/products.csv
+│   ├── stores/stores.csv
+│   ├── suppliers/suppliers.csv
+│   ├── sales/dt=YYYY-MM-DD/sales.csv
+│   ├── inventory/dt=YYYY-MM-DD/inventory.csv
+│   └── shipments/dt=YYYY-MM-DD/shipments.csv
+├── curated/                          ← dbt mart output (Parquet/Snappy)
+│   ├── dim_date/
+│   ├── dim_products/
+│   ├── dim_stores/
+│   ├── fct_daily_sales/
+│   ├── fct_inventory_snapshots/
+│   └── mart_supplier_performance/
+└── metadata/
+    └── dbt/dbt_athena.zip            ← dbt project bundle for ECS
+```
 
-## Design Decisions
+---
 
-**Why Athena?**: Serverless, pay-per-query. My usage costs $2/month vs $180/month for Redshift.
+## dbt Models
 
-**Why ECS for dbt?**: Lambda 15min timeout is too tight. ECS gives me control and full logs.
+### Staging (materialized as views)
 
-**Why Step Functions?**: Native AWS integrations, visual workflow, costs $0.50/month. Way easier than managing Airflow.
+| Model | Key Transformations |
+|---|---|
+| `stg_products` | Type casting, null handling on `supplier_id` |
+| `stg_stores` | Attribute cleaning, region normalization |
+| `stg_suppliers` | Lead time and on-time rate parsing |
+| `stg_sales` | Numeric casting, discount null coalescing |
+| `stg_inventory` | Negative quantity handling |
+| `stg_shipments` | Deduplication of 29 duplicate shipment IDs, date casting |
 
-**Why partition projection?**: Queries with date filters are instant. No Glue crawlers needed.
+### Marts (materialized as Parquet tables in `curated/`)
 
-**Why synthetic data?**: Real dataset was incomplete. Needed inventory, suppliers, shipments to build something meaningful.
+| Model | Grain | Description |
+|---|---|---|
+| `dim_date` | Day | Calendar dimension with fiscal attributes, weekend flags, day-of-week names |
+| `dim_products` | Product | Product attributes denormalized with supplier details |
+| `dim_stores` | Store | Store master with geography and format |
+| `fct_daily_sales` | Store × Product × Day | Quantity, pricing, discounts, profit |
+| `fct_inventory_snapshots` | Store × Product × Day | On-hand, on-order, reorder points, stockout flags |
+| `mart_supplier_performance` | Supplier | On-time rate, fill rate, average lead time, late shipment count |
 
-## Cost
+### Data Quality Tests (53 total)
 
-Running about $10/month:
+- Primary key uniqueness on all dimensions and fact grain combinations
+- Foreign key relationships validated across all fact-to-dimension joins
+- Business rule enforcement: quantities ≥ 0, prices > 0, rates between 0 and 1
+- Source-level NOT NULL constraints on all primary and foreign keys
 
-* Lambda: $0.50
-* Fargate: $5
-* Athena: $2
-* S3: $0.50
-* CloudWatch: $1
-* Step Functions: $0.50
-* SNS: $0.01
+---
 
-## Setup
+## Key Features
 
-Deploy infrastructure:
+- **End-to-end orchestration** via Step Functions with per-state error catching and SNS failure routing
+- **Infrastructure as code** — all AWS resources defined across 9 CloudFormation stacks with cross-stack exports
+- **Containerized dbt execution** on ECS Fargate with runtime profile injection (no credentials in image)
+- **Partition projection** on all fact tables — date-filtered Athena queries resolve instantly without crawlers
+- **Idempotent data uploads** — upload script checks S3 object existence before writing; pipeline is safe to re-run
+- **Least-privilege IAM** — separate roles for pipeline, ECS task execution, ECS task, Step Functions, and EventBridge
+- **Lifecycle policies** — raw data transitions to S3 Standard-IA after 30 days; staged after 90 days
+- **Observability** — CloudWatch dashboard tracking Step Functions execution metrics and dbt error log queries
+- **Failure alerting** — CloudWatch alarm on `ExecutionsFailed ≥ 1` publishes to SNS failure topic within 5 minutes
+
+---
+
+## Repository Structure
+
+```
+infrastructure/
+├── cfn/                        # 9 CloudFormation stacks (deploy in order)
+│   ├── retops-s3datalake.yaml          # S3 data lake with encryption + lifecycle
+│   ├── retops-athena.yaml              # Glue catalog, tables, Athena workgroup
+│   ├── retops-iam.yaml                 # Pipeline IAM role (least privilege)
+│   ├── retops-ecr-data-generator.yaml  # ECR repo for Lambda image
+│   ├── retops-ecr-ml.yaml              # ECR repo for ML image
+│   ├── retops-lambda-data-generator.yaml # Lambda function definition
+│   ├── retops-ecs-dbt.yaml             # ECS cluster + Fargate task definition
+│   ├── retops-step-functions.yaml      # State machine + EventBridge schedule + SNS
+│   └── retops-cloudwatch.yaml          # Dashboard + failure alarm
+├── docker/
+│   └── dbt_athena/             # Dockerfile for dbt-athena container image
+├── lambda_functions/
+│   └── data_generator/         # Lambda handler (app.py) + data generator (generator.py)
+└── deploy-all-cfn-stacks.sh    # Ordered stack deployment script
+
+dbt_athena/
+└── retailops_athena/
+    └── models/
+        ├── staging/            # 6 staging views + source tests
+        └── marts/              # 5 mart models + quality tests
+
+scripts/
+├── 02_upload_raw_data_to_s3.py         # Idempotent dimension + fact upload to S3
+├── 03_upload_dbt_project_to_s3.sh      # Zips and uploads dbt project to S3 for ECS
+└── show_schema_tables.py               # Utility: list Athena tables and schemas
+
+data/synthetic/                 # Local reference copies of dimension CSVs
+experiments/                    # Exploratory work (Favorita dataset, R pipeline, Postgres dbt)
+output/                         # Screenshots and query results from validation runs
+_docs/diagrams/                 # Architecture diagrams
+```
+
+---
+
+## Deployment
+
+### Prerequisites
+
+- AWS CLI configured with an IAM user that has CloudFormation, S3, ECR, Lambda, ECS, Step Functions, and IAM permissions
+- Docker (for building and pushing container images)
+- Region: `eu-west-2` (configurable in `deploy-all-cfn-stacks.sh`)
+
+### 1. Deploy all infrastructure stacks
 
 ```bash
 cd infrastructure
 ./deploy-all-cfn-stacks.sh
 ```
 
-Upload dbt project:
+Stacks are deployed in dependency order. Cross-stack exports are used to wire resources together — no manual ARN substitution required.
+
+### 2. Upload raw dimension data to S3
+
+```bash
+cd scripts
+python 02_upload_raw_data_to_s3.py
+```
+
+Uploads `products.csv`, `stores.csv`, `suppliers.csv` to the raw zone. Skips existing objects.
+
+### 3. Upload the dbt project bundle
 
 ```bash
 cd scripts
 ./03_upload_dbt_project_to_s3.sh
 ```
 
-Build and push Lambda image:
+Zips `dbt_athena/` and uploads to `s3://<data-lake-bucket>/metadata/dbt/dbt_athena.zip`. ECS pulls this at runtime.
+
+### 4. Build and push the Lambda container image
 
 ```bash
-cd lambda_functions/data_generator
+cd infrastructure/lambda_functions/data_generator
 ./push_image.sh
 ```
 
-Trigger manually:
+Builds with `--platform linux/amd64` for Lambda compatibility and pushes to ECR.
+
+### 5. Build and push the dbt container image
 
 ```bash
-aws stepfunctions start-execution \
-  --state-machine-arn <arn> \
-  --input '{"date":"2025-01-18"}'
-```
-
-## Repository Structure
-
-```
-infrastructure/cfn/          # 9 CloudFormation stacks
-dbt_athena/models/          # 12 dbt models (staging + marts)
-lambda_functions/           # Data generator
-scripts/                    # Upload and deployment scripts
-experiments/                # Week 1 work with Favorita dataset
-  └── favorita-r-pipeline/  # Complete R analysis pipeline
+cd infrastructure/docker/dbt_athena
+./push_image_ecr_dbt_athena.sh
 ```
 
 ---
 
-Built this to learn by doing. Made mistakes, fixed them, learned what actually matters.
+## Running the Pipeline
+
+### Automatic
+
+EventBridge triggers the state machine daily at **06:00 UTC**. The schedule is currently set to `DISABLED` in the CloudFormation template to avoid unintended charges — set `State: ENABLED` in `retops-step-functions.yaml` and redeploy to activate.
+
+### Manual execution
+
+```bash
+aws stepfunctions start-execution \
+  --state-machine-arn <StateMachineArn> \
+  --input '{"time": "2025-01-18T06:00:00Z"}'
+```
+
+The `time` field is parsed by the `ExtractDate` state to derive the target date. The pipeline then generates data for that date, runs dbt, validates with Athena, and sends an SNS notification.
+
+### Expected outputs
+
+| Stage | Output |
+|---|---|
+| Lambda | 3 CSV files written to `raw/` partitioned by date; returns row counts |
+| dbt run | 11 models materialized (6 views + 5 Parquet tables) |
+| dbt test | 53 tests executed; failures surface in CloudWatch logs and fail the ECS task |
+| Athena validation | Query result written to `s3://<athena-results-bucket>/quality-checks/` |
+| SNS | Email to subscribed address with date and status |
+
+---
+
+## Monitoring and Failure Handling
+
+### Logging
+
+All ECS container output (dbt stdout/stderr) streams to CloudWatch Logs at `/ecs/retailops/dev/dbt` with 14-day retention. The CloudWatch dashboard includes a log insights widget that surfaces any line matching `ERROR` or `FAIL` from the most recent dbt runs.
+
+### Alerting
+
+Two SNS topics handle pipeline outcomes:
+
+- `retailops-pipeline-success` — published on clean execution
+- `retailops-pipeline-failure` — published on any caught error, with the error message and state included in the notification body
+
+A CloudWatch alarm on `AWS/States ExecutionsFailed ≥ 1` (5-minute period) provides an independent failure signal that also publishes to the failure topic.
+
+### Error handling in Step Functions
+
+Every task state (`GenerateData`, `RunDbt`, `AthenaValidation`) has a `Catch` block on `States.ALL` that routes to `NotifyFailure`, which publishes the error context to SNS before transitioning to a terminal `Fail` state. This ensures no silent failures — every execution ends with an observable outcome.
+
+---
+
+## Design Decisions
+
+**Step Functions over Airflow**
+Step Functions provides native `.sync` integrations with Lambda, ECS, and Athena — no polling logic to write. The visual execution graph gives an immediate audit trail. At this scale, it costs ~$0.50/month vs. the operational overhead of running and maintaining an Airflow cluster.
+
+**Athena over a data warehouse**
+Athena is serverless and billed per query scanned. For a daily batch workload with moderate query volume, this costs ~$2/month vs. ~$180/month for the smallest Redshift cluster. Partition projection on date-partitioned fact tables keeps query performance fast without manual partition management.
+
+**ECS Fargate for dbt**
+Lambda's 15-minute execution limit is insufficient for a full dbt run + test cycle across 11 models. ECS Fargate provides an unconstrained execution environment with full CloudWatch log streaming, configurable CPU/memory (1 vCPU / 2 GB), and no persistent infrastructure to manage between runs.
+
+**Partition projection over Glue crawlers**
+Partition projection is configured directly in the Glue table definition with a date range and format template. New partitions are immediately queryable without running a crawler, eliminating scheduling complexity and crawler costs.
+
+**Synthetic data**
+The platform requires sales, inventory, and shipment data with consistent foreign keys across all three domains. No public dataset provides this combination. A Python generator produces realistic correlated data with controllable volume and date ranges, enabling deterministic testing of the full pipeline.
+
+---
+
+## Future Improvements
+
+- **CI/CD pipeline** — GitHub Actions workflow to lint CloudFormation (cfn-lint), run `dbt compile`, and deploy on merge to main
+- **Data quality thresholds** — Athena validation state currently checks row presence; extend to assert minimum row counts and flag anomalous drops
+- **dbt source freshness** — add `freshness` blocks to source definitions so stale partitions surface as dbt warnings before mart models run
+- **Secrets Manager** — move any remaining environment-level config to AWS Secrets Manager with automatic rotation
+- **Parquet partition pruning** — partition mart tables by date to enable predicate pushdown on time-range queries in the curated zone
+
+---
+
+## Cost (approximate monthly)
+
+| Service | Cost |
+|---|---|
+| ECS Fargate | ~$5.00 |
+| Athena | ~$2.00 |
+| CloudWatch | ~$1.00 |
+| Lambda | ~$0.50 |
+| Step Functions | ~$0.50 |
+| S3 | ~$0.50 |
+| SNS | ~$0.01 |
+| **Total** | **~$9.50** |
