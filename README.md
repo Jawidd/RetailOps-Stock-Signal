@@ -1,19 +1,16 @@
-# RetailOps Data Platform
-
+# RetailOps Stock Signal
 
 ## Summary
 
-This platform automatically generates and processes retail business data every day — tracking sales, stock levels, and supplier shipments across stores. It cleans and organizes that data into structured reports that answer questions like: which products are selling, which suppliers are reliable, and where inventory is running low. The entire system runs on AWS, starts itself on a schedule, sends an email if anything goes wrong, and costs roughly $10/month to operate.
-
-
+A serverless retail analytics platform on AWS that generates daily synthetic retail data, transforms it through a dbt pipeline, scores stockout risk across every store and product, and forecasts future demand using a machine learning model — all fully automated, infrastructure-as-code, and running for roughly $10/month.
 
 ---
 
 ## Technical Summary
 
-A serverless retail analytics platform on AWS, fully automated and deployed as infrastructure-as-code across 9 CloudFormation stacks. A containerized Lambda function generates daily synthetic retail data (sales, inventory, shipments) and uploads it to a partitioned S3 data lake. AWS Step Functions orchestrates the end-to-end pipeline: Lambda → ECS Fargate (dbt) → Athena validation → SNS notification. dbt transforms raw CSV data into Parquet-backed dimensional models (Kimball-style) in Athena, with 53 automated data quality tests enforcing schema contracts, referential integrity, and business rules. CloudWatch monitors pipeline health with a failure alarm wired to SNS email alerts.
+A serverless retail analytics platform on AWS, fully automated and deployed as infrastructure-as-code across 9 CloudFormation stacks. A containerized Lambda function generates daily synthetic retail data (sales, inventory, shipments) and uploads it to a partitioned S3 data lake. AWS Step Functions orchestrates the end-to-end pipeline: Lambda → ECS Fargate (dbt) → Athena validation → SNS notification. dbt transforms raw CSV data into Parquet-backed dimensional models (Kimball-style) in Athena, with 53 automated data quality tests enforcing schema contracts, referential integrity, and business rules. A LightGBM demand forecasting model trained with walk-forward cross-validation and Optuna hyperparameter tuning generates 7-day-ahead predictions per store × product, feeding a statistical reorder recommendation engine. CloudWatch monitors pipeline health with a failure alarm wired to SNS email alerts.
 
-**Stack:** AWS Lambda · ECS Fargate · Step Functions · S3 · Glue Data Catalog · Athena · dbt-athena · CloudFormation · CloudWatch · SNS · ECR
+**Stack:** AWS Lambda · ECS Fargate · Step Functions · S3 · Glue Data Catalog · Athena · dbt-athena · CloudFormation · CloudWatch · SNS · ECR · LightGBM · Optuna · SHAP
 
 ---
 
@@ -28,6 +25,12 @@ EventBridge (06:00 UTC daily)
         ├─► ECS Fargate     — runs dbt: staging views → Parquet mart tables → 53 tests
         ├─► Athena          — validates freshness: row count over trailing 7 days
         └─► SNS             — emails success or failure with execution context
+
+ML layer (runs after dbt succeeds):
+  python ml/features.py               — reads Athena → feature matrix → S3 Parquet
+  python ml/train.py                  — walk-forward CV + Optuna → LightGBM → S3
+  python ml/evaluate.py               — metrics + SHAP + forecasts → S3
+  python ml/reorder_recommendations.py — forecasts + safety stock → recommendations → S3
 ```
 
 ### Service Rationale
@@ -35,7 +38,7 @@ EventBridge (06:00 UTC daily)
 | Service | Role | Why |
 |---|---|---|
 | **Lambda** | Daily data generation | Stateless, event-driven, no infrastructure to manage |
-| **S3** | Data lake (raw + curated zones) | Durable, cheap, native to Athena/Glue |
+| **S3** | Data lake (raw + curated + ml zones) | Durable, cheap, native to Athena/Glue |
 | **Glue Data Catalog** | Schema registry | Partition projection eliminates crawler runs; Athena reads it natively |
 | **Athena** | Query engine + validation | Serverless, pay-per-query, no cluster to maintain |
 | **ECS Fargate** | dbt execution environment | Exceeds Lambda's 15-min timeout; full stdout/stderr in CloudWatch |
@@ -68,6 +71,13 @@ EventBridge (06:00 UTC daily)
               is present and row counts are non-zero over the trailing 7 days
 
 5. NOTIFY     SNS publishes success or failure with the execution date and error context
+
+6. SCORE      analytics/stockout_risk.py queries Athena mart tables and produces a
+              ranked stockout risk table for every store × product combination
+
+7. FORECAST   ml/ pipeline reads Athena mart tables, engineers features, trains a
+              LightGBM model with walk-forward CV, generates 7-day demand forecasts,
+              and produces statistical reorder recommendations with safety stock
 ```
 
 ### S3 Zone Layout
@@ -88,6 +98,13 @@ s3://retailops-data-lake-eu-west-2/
 │   ├── fct_daily_sales/
 │   ├── fct_inventory_snapshots/
 │   └── mart_supplier_performance/
+├── ml/                               ← ML pipeline output
+│   ├── features/features.parquet
+│   ├── models/demand_forecast_lgbm_v1.pkl
+│   ├── models/demand_forecast_lgbm_v1_metadata.json
+│   ├── forecasts/dt=YYYY-MM-DD/forecasts.parquet
+│   ├── reorder_recommendations/dt=YYYY-MM-DD/recommendations.parquet
+│   └── evaluation/eval_YYYY-MM-DD.json
 └── metadata/
     └── dbt/dbt_athena.zip            ← dbt project bundle for ECS
 ```
@@ -124,21 +141,86 @@ s3://retailops-data-lake-eu-west-2/
 - Foreign key relationships validated across all fact-to-dimension joins
 - Business rule enforcement: quantities ≥ 0, prices > 0, rates between 0 and 1
 - Source-level NOT NULL constraints on all primary and foreign keys
-- Data coverage test in interval: (2025-07-01 -> 2026-02-10)
+- Data coverage test in interval: (2025-07-01 → 2026-02-10)
 
 ---
 
-## Key Features
+## Analytical Layer — Stockout Risk Scoring
 
-- **End-to-end orchestration** via Step Functions with per-state error catching and SNS failure routing
-- **Infrastructure as code** — all AWS resources defined across 9 CloudFormation stacks with cross-stack exports
-- **Containerized dbt execution** on ECS Fargate with runtime profile injection (no credentials in image)
-- **Partition projection** on all fact tables — date-filtered Athena queries resolve instantly without crawlers
-- **Idempotent data uploads** — upload script checks S3 object existence before writing; pipeline is safe to re-run
-- **Least-privilege IAM** — separate roles for pipeline, ECS task execution, ECS task, Step Functions, and EventBridge
-- **Lifecycle policies** — raw data transitions to S3 Standard-IA after 30 days; staged after 90 days
-- **Observability** — CloudWatch dashboard tracking Step Functions execution metrics and dbt error log queries
-- **Failure alerting** — CloudWatch alarm on `ExecutionsFailed ≥ 1` publishes to SNS failure topic within 5 minutes
+`analytics/stockout_risk.py` queries the Athena mart tables and produces a ranked table of stockout risk for every store × product combination, plus a supplier reliability segmentation.
+
+```bash
+python analytics/stockout_risk.py
+```
+
+**Formula:**
+```
+days_of_stock_remaining  = max(quantity_on_hand, 0) / avg_daily_demand
+expected_replenishment   = avg_actual_lead_time_days / calculated_on_time_rate
+risk_score               = expected_replenishment - days_of_stock_remaining
+```
+
+A positive score means stockout is expected before the next shipment arrives. The supplier segmentation classifies all suppliers into a 2×2 quadrant (on-time rate vs fill rate) with written procurement actions for each quadrant.
+
+Outputs: `analytics/stockout_risk_output.csv`, `analytics/supplier_quadrants.csv`
+
+---
+
+## ML Layer — Demand Forecasting & Reorder Intelligence
+
+The ML layer is a direct upgrade over the deterministic stockout risk score. Where the risk score looks backward (trailing 30-day average demand), the ML layer looks forward (7-day-ahead forecast). Where the risk score ignores demand variance, the ML layer incorporates it via a statistical safety stock formula.
+
+### What it does
+
+1. **Feature engineering** (`ml/features.py`) — reads all six Athena mart tables and builds a feature matrix with lag features, rolling statistics, exponentially weighted means, demand trend, inventory state, promotion flags, calendar features, supplier reliability, and cross-store regional demand signals.
+
+2. **Model training** (`ml/train.py`) — trains a LightGBM model for each of the 7 forecast horizons using walk-forward cross-validation and Optuna hyperparameter tuning. Evaluates against three baselines (naive, seasonal naive, 7-day rolling mean) and reports Forecast Value Added (FVA).
+
+3. **Evaluation** (`ml/evaluate.py`) — full walk-forward evaluation across all folds, error breakdown by product category / store type / demand level / day of week / promotion flag, SHAP feature importance analysis, and forecast generation for the latest date.
+
+4. **Reorder recommendations** (`ml/reorder_recommendations.py`) — combines ML forecasts with supplier lead times and a statistical safety stock formula to produce a specific recommended order quantity and risk tier (Critical / High / Medium / Low) for every store × product combination.
+
+### Run order
+
+```bash
+python ml/features.py
+python ml/train.py
+python ml/evaluate.py
+python ml/reorder_recommendations.py
+```
+
+### Key design decisions
+
+**Walk-forward cross-validation, not a random split.** A random split on time-series data leaks future information into training. Walk-forward CV respects temporal ordering and produces metrics that reflect real deployment conditions.
+
+**Direct multi-step forecasting.** One LightGBM model per horizon day (h=1…7). This avoids error accumulation from recursive forecasting and allows each horizon to learn different feature relationships.
+
+**WAPE as primary metric, not RMSE.** Weighted Absolute Percentage Error weights errors by volume — a 10-unit error on a 10-unit SKU is catastrophic; the same error on a 1,000-unit SKU is acceptable. RMSE treats both identically.
+
+**Forecast Value Added (FVA) as deployment gate.** FVA = WAPE(model) / WAPE(seasonal_naive). If FVA ≥ 1.0, the model is worse than a naive baseline and is not deployed.
+
+**Safety stock formula with demand variance:**
+```
+safety_stock             = z × σ_demand × √(lead_time_days)
+reorder_point            = forecast_demand_over_lead_time + safety_stock
+recommended_order_qty    = max(0, reorder_point − quantity_on_hand − quantity_on_order)
+```
+Where z = 1.65 (95% service level). The √L term accounts for demand uncertainty compounding over the lead time.
+
+### Outputs written to S3
+
+| File | Contents |
+|---|---|
+| `ml/features/features.parquet` | Full feature matrix (~500K rows) |
+| `ml/models/demand_forecast_lgbm_v1.pkl` | Trained models for h=1…7 |
+| `ml/models/demand_forecast_lgbm_v1_metadata.json` | Hyperparameters, metrics, feature list |
+| `ml/forecasts/dt=YYYY-MM-DD/forecasts.parquet` | 7-day-ahead predictions per store × product |
+| `ml/reorder_recommendations/dt=YYYY-MM-DD/recommendations.parquet` | Order quantities + risk tiers |
+| `ml/evaluation/eval_YYYY-MM-DD.json` | Full evaluation report including SHAP summary |
+
+### Model card
+
+Full documentation — training data, feature descriptions, validation strategy, results table, error analysis findings, limitations, deployment instructions, and monitoring metrics — is in `ml/model_card.md`.
 
 ---
 
@@ -147,41 +229,46 @@ s3://retailops-data-lake-eu-west-2/
 ```
 infrastructure/
 ├── cfn/                        # 9 CloudFormation stacks (deploy in order)
-│   ├── retops-s3datalake.yaml          # S3 data lake with encryption + lifecycle
-│   ├── retops-athena.yaml              # Glue catalog, tables, Athena workgroup
-│   ├── retops-iam.yaml                 # Pipeline IAM role (least privilege)
-│   ├── retops-ecr-data-generator.yaml  # ECR repo for Lambda image
-│   ├── retops-ecr-ml.yaml              # ECR repo for ML image
-│   ├── retops-lambda-data-generator.yaml # Lambda function definition
-│   ├── retops-ecs-dbt.yaml             # ECS cluster + Fargate task definition
-│   ├── retops-step-functions.yaml      # State machine + EventBridge schedule + SNS
-│   └── retops-cloudwatch.yaml          # Dashboard + failure alarm
-├── docker/
-│   └── dbt_athena/             # Dockerfile for dbt-athena container image
-├── lambda_functions/
-│   └── data_generator/         # Lambda handler (app.py) + data generator (generator.py)
-└── deploy-all-cfn-stacks.sh    # Ordered stack deployment script
+│   ├── retops-s3datalake.yaml
+│   ├── retops-athena.yaml
+│   ├── retops-iam.yaml
+│   ├── retops-ecr-data-generator.yaml
+│   ├── retops-ecr-ml.yaml
+│   ├── retops-lambda-data-generator.yaml
+│   ├── retops-ecs-dbt.yaml
+│   ├── retops-step-functions.yaml
+│   └── retops-cloudwatch.yaml
+├── docker/dbt_athena/          # Dockerfile for dbt-athena container image
+├── lambda_functions/data_generator/
+└── deploy-all-cfn-stacks.sh
 
-dbt_athena/
-└── retailops_athena/
-    └── models/
-        ├── staging/            # 6 staging views + source tests
-        └── marts/              # 5 mart models + quality tests
-
-scripts/
-├── 02_upload_raw_data_to_s3.py         # Idempotent dimension + fact upload to S3
-├── 03_upload_dbt_project_to_s3.sh      # Zips and uploads dbt project to S3 for ECS
-└── show_schema_tables.py               # Utility: list Athena tables and schemas
+dbt_athena/retailops_athena/models/
+├── staging/                    # 6 staging views + source tests
+└── marts/                      # 5 mart models + quality tests
 
 analytics/
-├── stockout_risk.py            # Stockout risk scoring model (queries Athena mart tables)
-├── stockout_risk_output.csv    # Generated: ranked store × product risk table
-└── supplier_quadrants.csv      # Generated: supplier 2×2 reliability segmentation
+├── stockout_risk.py            # Deterministic stockout risk score (Athena → CSV)
+├── stockout_risk_output.csv
+└── supplier_quadrants.csv
+
+ml/
+├── athena_client.py            # Shared Athena query helper
+├── features.py                 # Feature engineering pipeline
+├── train.py                    # Walk-forward CV + Optuna + LightGBM training
+├── evaluate.py                 # Evaluation + SHAP + forecast generation
+├── reorder_recommendations.py  # Safety stock + reorder quantities
+├── model_card.md               # Full model documentation
+└── notebooks/
+    ├── 01_eda.ipynb
+    ├── 03_baseline_models.ipynb
+    └── 04_model_development.ipynb
+
+scripts/
+├── 02_upload_raw_data_to_s3.py
+├── 03_upload_dbt_project_to_s3.sh
+└── show_schema_tables.py
 
 data/synthetic/                 # Local reference copies of dimension CSVs
-experiments/                    # Exploratory work (Favorita dataset, R pipeline, Postgres dbt)
-output/                         # Screenshots and query results from validation runs
-_docs/diagrams/                 # Architecture diagrams
 ```
 
 ---
@@ -190,62 +277,38 @@ _docs/diagrams/                 # Architecture diagrams
 
 ### Prerequisites
 
-- AWS CLI configured with an IAM user that has CloudFormation, S3, ECR, Lambda, ECS, Step Functions, and IAM permissions
+- AWS CLI configured with CloudFormation, S3, ECR, Lambda, ECS, Step Functions, and IAM permissions
 - Docker (for building and pushing container images)
-- Region: `eu-west-2` (configurable in `deploy-all-cfn-stacks.sh`)
+- Python 3.11+ with dependencies from `requirements.txt`
+- Region: `eu-west-2`
 
-### 1. Deploy all infrastructure stacks
+### Infrastructure
 
 ```bash
 cd infrastructure
 ./deploy-all-cfn-stacks.sh
 ```
 
-Stacks are deployed in dependency order. Cross-stack exports are used to wire resources together — no manual ARN substitution required.
-
-### 2. Upload raw dimension data to S3
+### Data pipeline
 
 ```bash
-cd scripts
-python 02_upload_raw_data_to_s3.py
+python scripts/02_upload_raw_data_to_s3.py
+./scripts/03_upload_dbt_project_to_s3.sh
+cd infrastructure/lambda_functions/data_generator && ./push_image.sh
+cd infrastructure/docker/dbt_athena && ./push_image_ecr_dbt_athena.sh
 ```
 
-Uploads `products.csv`, `stores.csv`, `suppliers.csv` to the raw zone. Skips existing objects.
-
-### 3. Upload the dbt project bundle
+### ML pipeline
 
 ```bash
-cd scripts
-./03_upload_dbt_project_to_s3.sh
+pip install -r requirements.txt
+python ml/features.py
+python ml/train.py
+python ml/evaluate.py
+python ml/reorder_recommendations.py
 ```
 
-Zips `dbt_athena/` and uploads to `s3://<data-lake-bucket>/metadata/dbt/dbt_athena.zip`. ECS pulls this at runtime.
-
-### 4. Build and push the Lambda container image
-
-```bash
-cd infrastructure/lambda_functions/data_generator
-./push_image.sh
-```
-
-Builds with `--platform linux/amd64` for Lambda compatibility and pushes to ECR.
-
-### 5. Build and push the dbt container image
-
-```bash
-cd infrastructure/docker/dbt_athena
-./push_image_ecr_dbt_athena.sh
-```
-
----
-
-## Running the Pipeline
-
-### Automatic
-
-EventBridge triggers the state machine daily at **06:00 UTC**. The schedule is currently set to `DISABLED` in the CloudFormation template to avoid unintended charges — set `State: ENABLED` in `retops-step-functions.yaml` and redeploy to activate.
-
-### Manual execution
+### Run the full pipeline manually
 
 ```bash
 aws stepfunctions start-execution \
@@ -253,140 +316,29 @@ aws stepfunctions start-execution \
   --input '{"time": "2025-01-18T06:00:00Z"}'
 ```
 
-The `time` field is parsed by the `ExtractDate` state to derive the target date. The pipeline then generates data for that date, runs dbt, validates with Athena, and sends an SNS notification.
-
-### Expected outputs
-
-| Stage | Output |
-|---|---|
-| Lambda | 3 CSV files written to `raw/` partitioned by date; returns row counts |
-| dbt run | 11 models materialized (6 views + 5 Parquet tables) |
-| dbt test | 53 tests executed; failures surface in CloudWatch logs and fail the ECS task |
-| Athena validation | Query result written to `s3://<athena-results-bucket>/quality-checks/` |
-| SNS | Email to subscribed address with date and status |
-
 ---
 
 ## Monitoring and Failure Handling
 
-### Logging
+All ECS container output streams to CloudWatch Logs at `/ecs/retailops/dev/dbt` with 14-day retention. A CloudWatch alarm on `ExecutionsFailed ≥ 1` publishes to the SNS failure topic within 5 minutes. Every Step Functions task state has a `Catch` block on `States.ALL` that routes to `NotifyFailure` before terminating — no silent failures.
 
-All ECS container output (dbt stdout/stderr) streams to CloudWatch Logs at `/ecs/retailops/dev/dbt` with 14-day retention. The CloudWatch dashboard includes a log insights widget that surfaces any line matching `ERROR` or `FAIL` from the most recent dbt runs.
-
-### Alerting
-
-Two SNS topics handle pipeline outcomes:
-
-- `retailops-pipeline-success` — published on clean execution
-- `retailops-pipeline-failure` — published on any caught error, with the error message and state included in the notification body
-
-A CloudWatch alarm on `AWS/States ExecutionsFailed ≥ 1` (5-minute period) provides an independent failure signal that also publishes to the failure topic.
-
-### Error handling in Step Functions
-
-Every task state (`GenerateData`, `RunDbt`, `AthenaValidation`) has a `Catch` block on `States.ALL` that routes to `NotifyFailure`, which publishes the error context to SNS before transitioning to a terminal `Fail` state. This ensures no silent failures — every execution ends with an observable outcome.
+ML model health is tracked via WAPE drift, bias drift, and Forecast Value Added. If FVA rises above 1.0 on any scoring run, the model falls back to seasonal naive forecasts.
 
 ---
 
 ## Design Decisions
 
-**Step Functions over Airflow**
-Step Functions provides native `.sync` integrations with Lambda, ECS, and Athena — no polling logic to write. The visual execution graph gives an immediate audit trail. At this scale, it costs ~$0.50/month vs. the operational overhead of running and maintaining an Airflow cluster.
+**Step Functions over Airflow** — native `.sync` integrations, visual audit trail, ~$0.50/month vs operational overhead of a managed Airflow cluster.
 
-**Athena over a data warehouse**
-Athena is serverless and billed per query scanned. For a daily batch workload with moderate query volume, this costs ~$2/month vs. ~$180/month for the smallest Redshift cluster. Partition projection on date-partitioned fact tables keeps query performance fast without manual partition management.
+**Athena over Redshift** — serverless, pay-per-query, ~$2/month vs ~$180/month for the smallest Redshift cluster. Partition projection keeps query performance fast without manual partition management.
 
-**ECS Fargate for dbt**
-Lambda's 15-minute execution limit is insufficient for a full dbt run + test cycle across 11 models. ECS Fargate provides an unconstrained execution environment with full CloudWatch log streaming, configurable CPU/memory (1 vCPU / 2 GB), and no persistent infrastructure to manage between runs.
+**ECS Fargate for dbt** — Lambda's 15-minute limit is insufficient for a full dbt run + test cycle. Fargate provides unconstrained execution with full CloudWatch log streaming.
 
-**Partition projection over Glue crawlers**
-Partition projection is configured directly in the Glue table definition with a date range and format template. New partitions are immediately queryable without running a crawler, eliminating scheduling complexity and crawler costs.
+**LightGBM over neural models** — handles mixed feature types natively, fast enough to retrain daily on ~4,000 store-product combinations, feature importance is interpretable without SHAP overhead, and outperforms neural approaches on tabular data at this scale.
 
-**Synthetic data**
-The platform requires sales, inventory, and shipment data with consistent foreign keys across all three domains. No public dataset provides this combination. A Python generator produces realistic correlated data with controllable volume and date ranges, enabling deterministic testing of the full pipeline.
+**Direct multi-step over recursive forecasting** — one model per horizon avoids error accumulation and lets each horizon learn its own feature relationships.
 
----
-
-## Analytical Layer — Stockout Risk Scoring
-
-### Business Question
-
-Which store × product combinations are most likely to stock out before the next replenishment arrives, given current inventory levels, recent demand velocity, and supplier lead time?
-
-### Deliverable
-
-`analytics/stockout_risk.py` — queries the three Athena mart tables built by this pipeline and produces a ranked table of stockout risk, plus a supplier reliability segmentation.
-
-```bash
-pip install boto3 pandas numpy python-dotenv
-python analytics/stockout_risk.py
-```
-
-Outputs:
-- `analytics/stockout_risk_output.csv` — every store × product combination ranked by risk score
-- `analytics/supplier_quadrants.csv` — supplier segmentation by on-time rate vs fill rate
-
-### Formula
-
-```
-days_of_stock_remaining  = max(quantity_on_hand, 0) / avg_daily_demand
-expected_replenishment   = avg_actual_lead_time_days / calculated_on_time_rate
-risk_score               = expected_replenishment - days_of_stock_remaining
-```
-
-A **positive score** means the stock is expected to run out before the next shipment arrives. A **negative score** means current stock will outlast the replenishment window.
-
-**Why each term:**
-- `max(quantity_on_hand, 0)` — the generator occasionally produces negative on-hand values (a data quality artefact). Clipping to zero treats them as already stocked-out rather than inflating days-of-stock.
-- `avg_daily_demand` over 30 days — smooths day-to-day noise and matches the window a procurement team would review.
-- `avg_actual_lead_time_days / calculated_on_time_rate` — penalises unreliable suppliers. A supplier with a 10-day lead time and 50 % on-time rate is effectively a 20-day supplier from a planning perspective. This uses `calculated_on_time_rate` from `mart_supplier_performance`, which is derived from actual shipment records, not the master-data field.
-
-### Inputs (Athena mart tables)
-
-| Table | What it provides |
-|---|---|
-| `retailops.fct_daily_sales` | `avg_daily_demand` — sum of `quantity_sold` over trailing 30 days, divided by 30 |
-| `retailops.fct_inventory_snapshots` | `quantity_on_hand`, `reorder_point`, `quantity_on_order` at the latest snapshot date |
-| `retailops.mart_supplier_performance` | `avg_actual_lead_time_days`, `calculated_on_time_rate`, `avg_fill_rate` per supplier |
-| `retailops.dim_products` | `supplier_id` — joins products to their supplier |
-
-### Limitations
-
-- **Synthetic data**: demand is generated with fixed multipliers, not real seasonality, so the 30-day trailing average is a reasonable but flat proxy.
-- **No demand forecasting**: the score uses trailing average demand, not a forward-looking forecast. A demand spike the day after scoring would not be captured.
-- **Lead time is an average, not a distribution**: using `avg_actual_lead_time_days` ignores variance. A supplier with a mean of 10 days but high variance is riskier than the score implies.
-- **No safety-stock term**: `reorder_point` already encodes a safety buffer in the data model, but the risk score does not explicitly incorporate it — it scores against zero stock, not against the reorder threshold.
-
-### What would change with real data
-
-- Replace average lead time with a Bayesian posterior over the lead-time distribution (e.g. log-normal) to produce a probabilistic stockout date with confidence intervals.
-- Replace trailing-average demand with seasonal decomposition or simple exponential smoothing that respects day-of-week and promotional patterns.
-- Incorporate `reorder_point` directly into the score: flag combinations where `days_of_stock_remaining < expected_replenishment_days` **and** `quantity_on_hand < reorder_point` as the highest-priority tier.
-
-### Supplier Reliability Segmentation (stretch)
-
-The script also segments all suppliers into a 2×2 quadrant using `calculated_on_time_rate` vs `avg_fill_rate` from `mart_supplier_performance`, split at the median of each dimension.
-
-| Quadrant | On-time rate | Fill rate | Procurement action |
-|---|---|---|---|
-| Q1: Preferred | High | High | Lock in volume commitments; use for high-velocity SKUs |
-| Q2: Reliable but under-delivering | High | Low | Investigate partial shipment root cause; increase order quantities |
-| Q3: Slow but complete | Low | High | Add buffer stock; use for low-velocity SKUs with long lead tolerance |
-| Q4: Renegotiate or replace | Low | Low | Dual-source immediately; issue performance-improvement notice |
-
-**Q1 suppliers** deliver on schedule and ship complete orders. They are the lowest operational risk in the supply chain and should be prioritised for volume commitments and long-term contracts. In this dataset, their `calculated_on_time_rate` (derived from actual shipment records) is consistent with the master-data `on_time_delivery_rate`, which the 53 dbt tests validate. Procurement action: lock in preferred-supplier status, negotiate volume discounts, and assign them as the primary source for any store × product combination appearing in the top 25 of the stockout risk table.
-
-**Q4 suppliers** are doubly penalised in the risk score: their low on-time rate inflates `expected_replenishment_days`, and their low fill rate means even when they do arrive, orders are incomplete. Any store × product combination that depends on a Q4 supplier and carries a positive `risk_score` should be treated as a priority escalation. Procurement action: dual-source immediately with a Q1 supplier, issue a formal performance-improvement notice, and set a 90-day review gate. A large negative `on_time_rate_variance` in `mart_supplier_performance` (calculated rate much lower than the master-data rate) is an additional red flag that the supplier may be misreporting performance in their own systems.
-
----
-
-## Future Improvements
-
-- **CI/CD pipeline** — GitHub Actions workflow to lint CloudFormation (cfn-lint), run `dbt compile`, and deploy on merge to main
-- **Data quality thresholds** — Athena validation state currently checks row presence; extend to assert minimum row counts and flag anomalous drops
-- **dbt source freshness** — add `freshness` blocks to source definitions so stale partitions surface as dbt warnings before mart models run
-- **Secrets Manager** — move any remaining environment-level config to AWS Secrets Manager with automatic rotation
-- **Parquet partition pruning** — partition mart tables by date to enable predicate pushdown on time-range queries in the curated zone
+**Walk-forward CV over random split** — the only defensible validation strategy for time-series data. A random split leaks future information into training.
 
 ---
 
