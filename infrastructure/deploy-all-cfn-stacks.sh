@@ -16,15 +16,16 @@ echo "Region: $REGION"
 # The order is important as iamstacj import values from both stacks(s3datalake,athena)
 # lambda stack depends on ecr stack
 STACK_FILES=(
-   "retops-s3datalake.yaml"                # Week 2: AWS Data Lake  (use 02_upload_raw_data_to_s3.py to upload raw data to s3)
-   "retops-athena.yaml"                    # week 2: Athena, Glue Catalog +week 3: add stg and mart models to glue catalog
-   "retops-iam.yaml"                       # week 2: iam roles for s3 and athena
-   "retops-ecr-data-generator.yaml"        # week 4: ECR for data generator lambda
-   "retops-ecr-ml.yaml"                    # week 5: ECR + IAM for ML
-   "retops-lambda-data-generator.yaml"     # week 4: ECR for data generator lambda
-   "retops-ecs-dbt.yaml"                   # week 5: ECS for dbt
-   "retops-step-functions.yaml"            # week 5: Step functions to orchestrate dbt and data generator lambda
-   "retops-cloudwatch.yaml"                # week 4 :CloudWatch log group: `/ecs/retailops/dev/dbt` (14 day retention)
+   "retops-s3datalake.yaml"                # S3 data lake
+   "retops-athena.yaml"                    # Athena workgroup + Glue catalog
+   "retops-iam.yaml"                       # Pipeline IAM role
+   "retops-ecr-data-generator.yaml"        # ECR repo for Lambda image
+   "retops-ecr-ml.yaml"                    # ECR repo + IAM roles for ML (must precede retops-ecs-ml)
+   "retops-lambda-data-generator.yaml"     # Lambda function
+   "retops-ecs-dbt.yaml"                   # ECS cluster + dbt task definition
+   "retops-ecs-ml.yaml"                    # ECS ML task definition (must precede retops-step-functions)
+   "retops-step-functions.yaml"            # State machine: imports from ecs-dbt AND ecs-ml
+   "retops-cloudwatch.yaml"                # CloudWatch dashboard + failure alarm
 
 )
 

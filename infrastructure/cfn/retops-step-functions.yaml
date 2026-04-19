@@ -246,7 +246,7 @@ Resources:
                 "Parameters": {
                   "TopicArn": "${SuccessTopicArn}",
                   "Subject": "RetailOps Pipeline Success",
-                  "Message.$": "States.Format('Pipeline succeeded. date={} — dbt + ML complete.', $.date)"
+                  "Message.$": "States.Format('Pipeline succeeded. date={} - dbt + ML complete.', $.date)"
                 },
                 "End": true
               },
