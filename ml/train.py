@@ -168,20 +168,38 @@ def evaluate_baselines(df: pd.DataFrame,
 # Walk-forward CV folds
 # ---------------------------------------------------------------------------
 
+# Walk-forward CV folds anchored to the actual data interval 2025-07-01 -> 2026-02-10.
+# Total labelled days = 224 (2025-07-01 to 2026-02-09, since the target for day N
+# is demand on day N+1, so the last labelled row is 2026-02-09 with target=2026-02-10).
+#
+# Fold structure (day offsets from day0 = 2025-07-01, 1-indexed):
+#   Fold 1: train days   1-120  (2025-07-01 -> 2025-10-28)  val days 121-127
+#   Fold 2: train days   1-148  (2025-07-01 -> 2025-11-25)  val days 149-155
+#   Fold 3: train days   1-176  (2025-07-01 -> 2025-12-23)  val days 177-183
+#   Fold 4: train days   1-210  (2025-07-01 -> 2026-01-26)  val days 211-217
+#                                                            (2026-01-27 -> 2026-02-02)
+# Fold 4 is the most important: its validation window is the 7 days immediately
+# before the final 7 days of labelled data, so it best reflects the model's
+# performance on the prediction task (forecasting Feb 2026).
 FOLDS = [
-    {"train_end": 90,  "val_start": 91,  "val_end": 97},
-    {"train_end": 110, "val_start": 111, "val_end": 117},
-    {"train_end": 130, "val_start": 131, "val_end": 137},
-    {"train_end": 150, "val_start": 151, "val_end": 157},
+    {"train_end": 120, "val_start": 121, "val_end": 127},
+    {"train_end": 148, "val_start": 149, "val_end": 155},
+    {"train_end": 176, "val_start": 177, "val_end": 183},
+    {"train_end": 210, "val_start": 211, "val_end": 217},
 ]
 
 
 def make_lgb_dataset(df: pd.DataFrame, horizon: int) -> tuple:
     """
     Shift target by `horizon` days to create h-step-ahead labels.
+    Only uses rows where the original target is known (not NaN) — inference
+    rows (last date per series, target=NaN) are excluded here and handled
+    separately in evaluate.py and reorder_recommendations.py.
     Returns (X, y) with NaN rows dropped.
     """
     df = df.copy()
+    # Restrict to labelled rows only before shifting
+    df = df[df["target"].notna()]
     df["target_h"] = df.groupby(["store_id", "product_id"])["target"].shift(-(horizon - 1))
     df = df.dropna(subset=["target_h"] + FEATURE_COLS)
 
@@ -273,38 +291,42 @@ def train():
     print("=" * 70)
 
     df = load_features()
-    day0 = df["date"].min()
-    print(f"  Date range : {day0.date()} → {df['date'].max().date()}")
-    print(f"  Rows       : {len(df):,}")
-    print(f"  Pairs      : {df.groupby(['store_id','product_id']).ngroups:,}")
+    # Separate training rows (target known) from inference rows (target=NaN).
+    # Training and CV only ever see labelled rows.
+    df_train = df[df["target"].notna()].copy()
+    day0 = df_train["date"].min()
+    print(f"  Training data  : {day0.date()} -> {df_train['date'].max().date()}")
+    print(f"  Inference date : {df[df['target'].isna()]['date'].max().date()} (features ready, no label yet)")
+    print(f"  Labelled rows  : {len(df_train):,}")
+    print(f"  Pairs          : {df_train.groupby(['store_id','product_id']).ngroups:,}")
 
-    # --- baseline evaluation on fold 4 (most recent, most representative) ---
-    print("\n[1/3] Evaluating baselines …")
+    # --- baseline evaluation on fold 4 (most recent, closest to prediction boundary) ---
+    print("\n[1/3] Evaluating baselines ...")
     fold4 = FOLDS[-1]
     baseline_metrics = evaluate_baselines(
-        df, fold4["train_end"], fold4["val_start"], fold4["val_end"], day0
+        df_train, fold4["train_end"], fold4["val_start"], fold4["val_end"], day0
     )
     for name, m in baseline_metrics.items():
         print(f"  {name:20s}  WAPE={m['wape']:.4f}  RMSE={m['rmse']:.3f}  Bias={m['bias']:.3f}")
 
     # --- Optuna hyperparameter search ---
-    print(f"\n[2/3] Optuna search ({N_OPTUNA_TRIALS} trials) …")
+    print(f"\n[2/3] Optuna search ({N_OPTUNA_TRIALS} trials) ...")
     study = optuna.create_study(direction="minimize",
                                 sampler=optuna.samplers.TPESampler(seed=42))
-    study.optimize(make_objective(df, day0), n_trials=N_OPTUNA_TRIALS, show_progress_bar=False)
+    study.optimize(make_objective(df_train, day0), n_trials=N_OPTUNA_TRIALS, show_progress_bar=False)
 
     best_params = study.best_params
     best_params.update({"objective": "regression_l1", "bagging_freq": 1})
     print(f"  Best WAPE  : {study.best_value:.4f}")
     print(f"  Best params: {best_params}")
 
-    # --- train final models (one per horizon) on all available data ---
-    print("\n[3/3] Training final models on full dataset …")
+    # --- train final models on ALL labelled data (up to 2026-02-09) ---
+    print("\n[3/3] Training final models on full labelled dataset ...")
     models = {}
     cv_metrics = {}
 
     for h in range(1, N_HORIZONS + 1):
-        X_all, y_all = make_lgb_dataset(df, h)
+        X_all, y_all = make_lgb_dataset(df_train, h)
         model = lgb.LGBMRegressor(
             **best_params, n_estimators=500, random_state=42, verbose=-1
         )
@@ -316,9 +338,9 @@ def train():
         fold4_val_start = day0 + pd.Timedelta(days=fold4["val_start"] - 1)
         fold4_val_end   = day0 + pd.Timedelta(days=fold4["val_end"]   - 1)
 
-        X_tr, y_tr   = make_lgb_dataset(df[df["date"] <= fold4_train_end], h)
+        X_tr, y_tr   = make_lgb_dataset(df_train[df_train["date"] <= fold4_train_end], h)
         X_val, y_val = make_lgb_dataset(
-            df[(df["date"] >= fold4_val_start) & (df["date"] <= fold4_val_end)], h
+            df_train[(df_train["date"] >= fold4_val_start) & (df_train["date"] <= fold4_val_end)], h
         )
 
         if len(X_val) > 0:
@@ -357,12 +379,13 @@ def train():
         "optuna_best_wape": study.best_value,
         "cv_metrics":      cv_metrics,
         "baseline_metrics": baseline_metrics,
-        "date_range": {
-            "min": str(df["date"].min().date()),
-            "max": str(df["date"].max().date()),
+        "training_date_range": {
+            "min": str(df_train["date"].min().date()),
+            "max": str(df_train["date"].max().date()),
         },
-        "n_rows":  len(df),
-        "n_pairs": df.groupby(["store_id", "product_id"]).ngroups,
+        "inference_from": str(df[df["target"].isna()]["date"].max().date()),
+        "n_rows":  len(df_train),
+        "n_pairs": df_train.groupby(["store_id", "product_id"]).ngroups,
     }
     meta_key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}_metadata.json"
     s3.put_object(

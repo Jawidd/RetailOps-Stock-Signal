@@ -43,5 +43,7 @@ models:
 
 
 vars:
-  # Business logic variables
-  current_date: '2025-01-12'
+  # current_date is used as the logical pipeline date for any date-bounded
+  # logic in models. It is overridden at runtime via --vars when needed.
+  # The marts are full-table rebuilds so this var does not gate data loading.
+  current_date: '2026-02-11'

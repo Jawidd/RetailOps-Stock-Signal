@@ -182,17 +182,27 @@ Resources:
                   }
                 },
                 "ResultPath": "$.dbt",
-                "Next": "AthenaValidation",
+                "Next": "BuildValidationQuery",
                 "Catch": [
                   { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
                 ]
+              },
+
+              "BuildValidationQuery": {
+                "Type": "Pass",
+                "Parameters": {
+                  "date.$": "$.date",
+                  "query.$": "States.Format('SELECT count(*) AS row_count FROM retailops_marts.fct_daily_sales WHERE CAST(sale_date AS VARCHAR) = {}', $.date)"
+                },
+                "ResultPath": "$.validation",
+                "Next": "AthenaValidation"
               },
 
               "AthenaValidation": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
                 "Parameters": {
-                  "QueryString": "SELECT max(sale_date) AS latest_sale_date, count(*) AS rows_last_7_days FROM retailops_marts.fct_daily_sales WHERE sale_date >= current_date - interval '7' day",
+                  "QueryString.$": "$.validation.query",
                   "WorkGroup": "${WorkGroupName}",
                   "ResultConfiguration": {
                     "OutputLocation": "s3://${AthenaResultsBucket}/quality-checks/"

@@ -305,17 +305,24 @@ def build_features() -> pd.DataFrame:
         on="product_id", how="left",
     )
 
-    # drop rows where target is NaN (last day of each series has no next-day label)
-    features = features.dropna(subset=["target"])
-
-    # drop rows with insufficient lag history (first 28 days of each series)
+    # Drop rows with insufficient lag history (first 28 days of each series).
+    # Do NOT drop rows where target is NaN here — the last row of each series
+    # (2026-02-10) has target=NaN because there is no 2026-02-11 observation yet.
+    # That row is the inference row: it holds the features needed to predict
+    # 2026-02-11 onward. Dropping it here would make forecast generation impossible.
+    # train.py filters to target.notna() for training; evaluate.py and
+    # reorder_recommendations.py use the NaN-target rows for inference.
     features = features.dropna(subset=["lag_28"])
 
     features["date"] = pd.to_datetime(features["date"])
     features = features.sort_values(["store_id", "product_id", "date"]).reset_index(drop=True)
 
-    print(f"\n     Final feature matrix: {len(features):,} rows × {len(features.columns)} columns")
-    print(f"     Date range: {features['date'].min().date()} → {features['date'].max().date()}")
+    n_train = features["target"].notna().sum()
+    n_infer = features["target"].isna().sum()
+    print(f"\n     Final feature matrix : {len(features):,} rows x {len(features.columns)} columns")
+    print(f"     Training rows (target known)  : {n_train:,}")
+    print(f"     Inference rows (target=NaN)   : {n_infer:,}  <- last date per series (2026-02-10)")
+    print(f"     Date range: {features['date'].min().date()} -> {features['date'].max().date()}")
     print(f"     Store-product pairs: {features.groupby(['store_id','product_id']).ngroups:,}")
 
     # --- write to S3 ---

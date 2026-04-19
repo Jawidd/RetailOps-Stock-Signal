@@ -54,6 +54,7 @@ Run:
 
 import io
 import json
+import os
 import pickle
 import numpy as np
 import pandas as pd
@@ -90,6 +91,11 @@ SQL_SUPPLIER_LEAD = """
     LEFT JOIN retailops.mart_supplier_performance sp
       ON p.supplier_id = sp.supplier_id
 """
+
+
+def _pipeline_date() -> str:
+    """Return PIPELINE_DATE env var if set, otherwise today UTC."""
+    return os.environ.get("PIPELINE_DATE", "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
 
 
 def load_models() -> dict:
@@ -139,30 +145,43 @@ def generate_recommendations() -> pd.DataFrame:
     for col in ["avg_actual_lead_time_days", "calculated_on_time_rate"]:
         sup[col] = pd.to_numeric(sup[col], errors="coerce")
 
-    print("\n[3/4] Generating 7-day forecasts …")
-    latest_date = features["date"].max()
-    latest_rows = features[features["date"] == latest_date].copy()
+    print("\n[3/4] Generating 7-day forecasts from inference rows ...")
+    # Use NaN-target rows as the inference slice (last date per series = 2026-02-10).
+    # These rows have all features computed from observed history but no label,
+    # which is the real forecasting situation.
+    infer_rows = features[features["target"].isna()].copy()
+    if infer_rows.empty:
+        # Fallback: old feature matrix where NaN-target rows were dropped
+        latest_date = features["date"].max()
+        infer_rows = features[features["date"] == latest_date].copy()
+        print(f"  Warning: no NaN-target rows found, falling back to date={latest_date.date()}")
+
+    inference_date = infer_rows["date"].max()
+    print(f"  Inference date: {inference_date.date()}")
+    print(f"  h=1 forecast -> {(inference_date + pd.Timedelta(days=1)).date()}")
+
+    infer_clean = infer_rows.dropna(subset=FEATURE_COLS).copy()
+    for col in CATEGORICAL_COLS:
+        infer_clean[col] = infer_clean[col].astype("category")
 
     # collect per-horizon predictions
     horizon_preds = {}
     for h in range(1, N_HORIZONS + 1):
-        X_h, _ = make_lgb_dataset(latest_rows, h)
-        if len(X_h) == 0:
+        X_infer = infer_clean[FEATURE_COLS + CATEGORICAL_COLS].copy()
+        if len(X_infer) == 0:
             continue
-        preds = np.clip(models[h].predict(X_h), 0, None)
-        meta  = latest_rows.dropna(subset=["lag_28", "target"]).reset_index(drop=True)
+        preds = np.clip(models[h].predict(X_infer), 0, None)
         for i, pred in enumerate(preds):
-            if i >= len(meta):
-                break
-            key = (meta.loc[i, "store_id"], meta.loc[i, "product_id"])
+            key = (infer_clean.iloc[i]["store_id"], infer_clean.iloc[i]["product_id"])
             horizon_preds.setdefault(key, {})[h] = pred
 
-    # demand std dev over trailing 14 days (from features)
+    # demand std dev over trailing 14 days (from labelled rows only)
     demand_std = (
-        features.groupby(["store_id", "product_id"])
-                .apply(lambda g: g.sort_values("date").tail(14)["target"].std())
-                .reset_index()
-                .rename(columns={0: "demand_std_14d"})
+        features[features["target"].notna()]
+        .groupby(["store_id", "product_id"])
+        .apply(lambda g: g.sort_values("date").tail(14)["target"].std())
+        .reset_index()
+        .rename(columns={0: "demand_std_14d"})
     )
 
     print("\n[4/4] Computing reorder quantities …")
@@ -212,7 +231,8 @@ def generate_recommendations() -> pd.DataFrame:
         records.append({
             "store_id":                  store_id,
             "product_id":                product_id,
-            "recommendation_date":       str(date.today()),
+            "recommendation_date":       _pipeline_date(),
+            "inference_date":            str(inference_date.date()),
             "quantity_on_hand":          round(qty_on_hand, 2),
             "quantity_on_order":         round(qty_on_order, 2),
             "daily_demand_forecast":     round(daily_demand_forecast, 4),
@@ -251,13 +271,13 @@ def generate_recommendations() -> pd.DataFrame:
     ]].to_string(index=False))
 
     # --- write to S3 ---
-    today_str = date.today().isoformat()
-    key = f"{RECS_S3_PREFIX}/dt={today_str}/recommendations.parquet"
+    pipeline_date = _pipeline_date()
+    key = f"{RECS_S3_PREFIX}/dt={pipeline_date}/recommendations.parquet"
     buf = io.BytesIO()
     recs.to_parquet(buf, index=False, engine="pyarrow")
     buf.seek(0)
     get_s3_client().put_object(Bucket=BUCKET, Key=key, Body=buf.getvalue())
-    print(f"\n  Recommendations written → s3://{BUCKET}/{key}")
+    print(f"\n  Recommendations written -> s3://{BUCKET}/{key}")
 
     return recs
 

@@ -13,6 +13,7 @@ Run:
 
 import io
 import json
+import os
 import pickle
 import warnings
 import numpy as np
@@ -37,6 +38,11 @@ FORECASTS_S3_PREFIX = "ml/forecasts"
 # ---------------------------------------------------------------------------
 # Load artifacts
 # ---------------------------------------------------------------------------
+
+def _pipeline_date() -> str:
+    """Return PIPELINE_DATE env var if set, otherwise today UTC."""
+    return os.environ.get("PIPELINE_DATE", "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+
 
 def load_models() -> dict:
     s3 = get_s3_client()
@@ -244,35 +250,51 @@ def run_shap_analysis(models: dict, df: pd.DataFrame,
 
 def generate_forecasts(models: dict, df: pd.DataFrame) -> pd.DataFrame:
     """
-    For each store × product, generate h=1…7 forecasts from the latest
-    available feature row. Returns a DataFrame ready to write to S3/Athena.
-    """
-    latest_date = df["date"].max()
-    latest_rows = df[df["date"] == latest_date].copy()
+    Generate h=1..7 forecasts from the inference rows: the last date per
+    store x product series where target=NaN (2026-02-10 in the current dataset).
+    These rows have all lag/rolling features computed from observed history
+    but no label, which is exactly the real-world forecasting situation.
 
-    X_latest, _ = make_lgb_dataset(latest_rows, 1)
-    # X_latest has the features for the latest date; we predict h=1…7
+    h=1 forecast -> predicted demand for 2026-02-11
+    h=2 forecast -> predicted demand for 2026-02-12
+    ...and so on.
+    """
+    # Use NaN-target rows as the inference slice.
+    # Fall back to the last labelled date if no NaN-target rows exist
+    # (e.g. if features.py was run with the old drop-NaN behaviour).
+    infer_rows = df[df["target"].isna()].copy()
+    if infer_rows.empty:
+        latest_date = df["date"].max()
+        infer_rows = df[df["date"] == latest_date].copy()
+        print(f"  Warning: no NaN-target rows found, falling back to date={latest_date.date()}")
+
+    inference_date = infer_rows["date"].max()
+    print(f"  Inference date (features from): {inference_date.date()}")
+    print(f"  Forecasting dates: {(inference_date + pd.Timedelta(days=1)).date()} "
+          f"to {(inference_date + pd.Timedelta(days=N_HORIZONS)).date()}")
+
+    # For inference we only need the feature columns, not a valid target.
+    # Drop rows missing any feature (lag_28 is the strictest requirement).
+    infer_clean = infer_rows.dropna(subset=FEATURE_COLS).copy()
+    for col in CATEGORICAL_COLS:
+        infer_clean[col] = infer_clean[col].astype("category")
 
     records = []
     for h in range(1, N_HORIZONS + 1):
-        X_h, _ = make_lgb_dataset(latest_rows, h)
-        if len(X_h) == 0:
+        X_infer = infer_clean[FEATURE_COLS + CATEGORICAL_COLS].copy()
+        if len(X_infer) == 0:
             continue
-        preds = np.clip(models[h].predict(X_h), 0, None)
-
-        # recover store_id / product_id from the rows that survived dropna
-        meta = latest_rows.dropna(subset=["lag_28", "target"]).reset_index(drop=True)
+        preds = np.clip(models[h].predict(X_infer), 0, None)
+        forecast_date = inference_date + pd.Timedelta(days=h)
         for i, pred in enumerate(preds):
-            if i >= len(meta):
-                break
             records.append({
-                "store_id":               meta.loc[i, "store_id"],
-                "product_id":             meta.loc[i, "product_id"],
-                "forecast_generated_date": str(latest_date.date()),
-                "horizon_day":            h,
-                "forecast_date":          str((latest_date + pd.Timedelta(days=h)).date()),
-                "predicted_quantity":     round(float(pred), 4),
-                "model_version":          MODEL_VERSION,
+                "store_id":                infer_clean.iloc[i]["store_id"],
+                "product_id":              infer_clean.iloc[i]["product_id"],
+                "forecast_generated_date": str(inference_date.date()),
+                "horizon_day":             h,
+                "forecast_date":           str(forecast_date.date()),
+                "predicted_quantity":      round(float(pred), 4),
+                "model_version":           MODEL_VERSION,
             })
 
     return pd.DataFrame(records)
@@ -329,21 +351,22 @@ def evaluate():
         print(f"    {feat:30s}  {val:.4f}")
 
     # --- generate and save forecasts ---
-    print("\n[4/4] Generating forecasts for latest date …")
+    print("\n[4/4] Generating forecasts for latest date ...")
     forecasts = generate_forecasts(models, df)
     print(f"  {len(forecasts):,} forecast rows generated")
 
-    today_str = date.today().isoformat()
-    forecast_key = f"{FORECASTS_S3_PREFIX}/dt={today_str}/forecasts.parquet"
+    pipeline_date = _pipeline_date()
+    forecast_key = f"{FORECASTS_S3_PREFIX}/dt={pipeline_date}/forecasts.parquet"
     buf = io.BytesIO()
     forecasts.to_parquet(buf, index=False, engine="pyarrow")
     buf.seek(0)
     get_s3_client().put_object(Bucket=BUCKET, Key=forecast_key, Body=buf.getvalue())
-    print(f"  Forecasts written → s3://{BUCKET}/{forecast_key}")
+    print(f"  Forecasts written -> s3://{BUCKET}/{forecast_key}")
 
     # --- save evaluation report ---
     report = {
         "evaluated_at":       datetime.utcnow().isoformat(),
+        "pipeline_date":      pipeline_date,
         "model_version":      MODEL_VERSION,
         "overall_wape":       overall_wape,
         "fva":                fva(overall_wape, baseline_wape),
@@ -351,12 +374,12 @@ def evaluate():
         "segment_analysis":   segments,
         "shap_summary":       shap_results,
     }
-    report_key = f"ml/evaluation/eval_{today_str}.json"
+    report_key = f"ml/evaluation/eval_{pipeline_date}.json"
     get_s3_client().put_object(
         Bucket=BUCKET, Key=report_key,
         Body=json.dumps(report, indent=2, default=str).encode()
     )
-    print(f"  Evaluation report → s3://{BUCKET}/{report_key}")
+    print(f"  Evaluation report -> s3://{BUCKET}/{report_key}")
 
     return report
 
