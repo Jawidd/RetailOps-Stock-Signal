@@ -84,11 +84,24 @@ from pathlib import Path
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 REGION          = os.getenv("AWS_DEFAULT_REGION", "eu-west-2")
-WORKGROUP       = "retailops-primary"
-DATABASE        = "retailops"
+WORKGROUP       = os.getenv("ATHENA_WORKGROUP", "retailops-primary")
+ATHENA_CATALOG  = os.getenv("ATHENA_CATALOG", "AwsDataCatalog")
+ATHENA_SCHEMA   = os.getenv("ATHENA_SCHEMA", os.getenv("ATHENA_DATABASE", "retailops_marts"))
+DATABASE        = os.getenv("ATHENA_EXECUTION_DATABASE", ATHENA_SCHEMA)
 DEMAND_DAYS     = 30
 OUTPUT_DIR      = Path(__file__).parent
 POLL_INTERVAL   = 2   # seconds between Athena status checks
+
+DEMAND_TABLE            = os.getenv("ATHENA_DEMAND_TABLE", "fct_daily_sales")
+INVENTORY_TABLE         = os.getenv("ATHENA_INVENTORY_TABLE", "fct_inventory_snapshots")
+SUPPLIER_TABLE          = os.getenv("ATHENA_SUPPLIER_TABLE", "mart_supplier_performance")
+PRODUCT_SUPPLIER_TABLE  = os.getenv("ATHENA_PRODUCT_SUPPLIER_TABLE", "dim_products")
+DEMAND_QTY_COLUMN       = os.getenv("ATHENA_DEMAND_QTY_COLUMN", "total_quantity_sold")
+
+
+def table_ref(name: str) -> str:
+    """Return a fully-qualified table reference if only a table name is supplied."""
+    return name if "." in name else f"{ATHENA_CATALOG}.{ATHENA_SCHEMA}.{name}"
 
 
 # ---------------------------------------------------------------------------
@@ -98,9 +111,13 @@ POLL_INTERVAL   = 2   # seconds between Athena status checks
 def run_query(client: boto3.client, sql: str, label: str) -> pd.DataFrame:
     """Submit a query to Athena, wait for completion, return a DataFrame."""
     print(f"  → Running: {label}")
+    query_context = {"Database": DATABASE}
+    if ATHENA_CATALOG:
+        query_context["Catalog"] = ATHENA_CATALOG
+
     resp = client.start_query_execution(
         QueryString=sql,
-        QueryExecutionContext={"Database": DATABASE},
+        QueryExecutionContext=query_context,
         WorkGroup=WORKGROUP,
     )
     qid = resp["QueryExecutionId"]
@@ -138,13 +155,13 @@ SQL_DEMAND = textwrap.dedent(f"""
     SELECT
         store_id,
         product_id,
-        CAST(SUM(quantity_sold) AS DOUBLE) / {DEMAND_DAYS}.0  AS avg_daily_demand
-    FROM   retailops.fct_daily_sales
-    WHERE  sale_date >= DATE_ADD('day', -{DEMAND_DAYS}, (SELECT MAX(sale_date) FROM retailops.fct_daily_sales))
+        CAST(SUM({DEMAND_QTY_COLUMN}) AS DOUBLE) / {DEMAND_DAYS}.0  AS avg_daily_demand
+    FROM   {table_ref(DEMAND_TABLE)}
+    WHERE  sale_date >= DATE_ADD('day', -{DEMAND_DAYS}, (SELECT MAX(sale_date) FROM {table_ref(DEMAND_TABLE)}))
     GROUP  BY store_id, product_id
 """)
 
-SQL_INVENTORY = textwrap.dedent("""
+SQL_INVENTORY = textwrap.dedent(f"""
     SELECT
         store_id,
         product_id,
@@ -155,11 +172,11 @@ SQL_INVENTORY = textwrap.dedent("""
         CAST(reorder_point             AS DOUBLE) AS reorder_point,
         CAST(is_out_of_stock           AS BOOLEAN) AS is_out_of_stock,
         CAST(needs_reorder             AS BOOLEAN) AS needs_reorder
-    FROM   retailops.fct_inventory_snapshots
-    WHERE  snapshot_date = (SELECT MAX(snapshot_date) FROM retailops.fct_inventory_snapshots)
+    FROM   {table_ref(INVENTORY_TABLE)}
+    WHERE  snapshot_date = (SELECT MAX(snapshot_date) FROM {table_ref(INVENTORY_TABLE)})
 """)
 
-SQL_SUPPLIER = textwrap.dedent("""
+SQL_SUPPLIER = textwrap.dedent(f"""
     SELECT
         supplier_id,
         supplier_name,
@@ -168,14 +185,14 @@ SQL_SUPPLIER = textwrap.dedent("""
         CAST(avg_fill_rate             AS DOUBLE) AS avg_fill_rate,
         CAST(total_shipments           AS BIGINT)  AS total_shipments,
         CAST(late_shipments            AS BIGINT)  AS late_shipments
-    FROM   retailops.mart_supplier_performance
+    FROM   {table_ref(SUPPLIER_TABLE)}
 """)
 
 # product → supplier mapping lives in dim_products
 SQL_PRODUCT_SUPPLIER = textwrap.dedent("""
     SELECT product_id, supplier_id
-    FROM   retailops.dim_products
-""")
+    FROM   {product_supplier_table}
+""".format(product_supplier_table=table_ref(PRODUCT_SUPPLIER_TABLE)))
 
 
 # ---------------------------------------------------------------------------
