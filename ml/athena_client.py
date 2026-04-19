@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 REGION     = os.getenv("AWS_DEFAULT_REGION", "eu-west-2")
 WORKGROUP  = "retailops-primary"
-DATABASE   = "retailops"
+DATABASE   = "retailops_marts"
 BUCKET     = f"retailops-data-lake-{REGION}"
 POLL_SEC   = 2
 

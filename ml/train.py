@@ -51,7 +51,7 @@ import boto3
 from datetime import datetime
 from pathlib import Path
 
-from ml.athena_client import get_s3_client, BUCKET
+from athena_client import get_s3_client, BUCKET
 
 warnings.filterwarnings("ignore", category=UserWarning)
 optuna.logging.set_verbosity(optuna.logging.WARNING)

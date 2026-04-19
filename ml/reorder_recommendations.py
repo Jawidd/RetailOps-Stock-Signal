@@ -61,8 +61,8 @@ import pandas as pd
 from datetime import date, datetime
 from pathlib import Path
 
-from ml.athena_client import run_query, get_s3_client, BUCKET
-from ml.train import (
+from athena_client import run_query, get_s3_client, BUCKET
+from train import (
     FEATURE_COLS, CATEGORICAL_COLS, MODEL_VERSION, MODEL_S3_PREFIX,
     FEATURES_S3_KEY, make_lgb_dataset, N_HORIZONS,
 )
@@ -77,8 +77,8 @@ SQL_LATEST_INVENTORY = """
         CAST(quantity_on_hand_clipped AS DOUBLE) AS quantity_on_hand,
         CAST(quantity_on_order        AS DOUBLE) AS quantity_on_order,
         CAST(reorder_point            AS DOUBLE) AS reorder_point
-    FROM retailops.fct_inventory_snapshots
-    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM retailops.fct_inventory_snapshots)
+    FROM retailops_marts.fct_inventory_snapshots
+    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM retailops_marts.fct_inventory_snapshots)
 """
 
 SQL_SUPPLIER_LEAD = """
@@ -87,8 +87,8 @@ SQL_SUPPLIER_LEAD = """
         p.supplier_id,
         CAST(sp.avg_actual_lead_time_days AS DOUBLE) AS avg_actual_lead_time_days,
         CAST(sp.calculated_on_time_rate   AS DOUBLE) AS calculated_on_time_rate
-    FROM retailops.dim_products p
-    LEFT JOIN retailops.mart_supplier_performance sp
+    FROM retailops_marts.dim_products p
+    LEFT JOIN retailops_marts.mart_supplier_performance sp
       ON p.supplier_id = sp.supplier_id
 """
 

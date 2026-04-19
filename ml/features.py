@@ -33,7 +33,7 @@ import pandas as pd
 from pathlib import Path
 from scipy import stats as scipy_stats
 
-from ml.athena_client import run_query, get_s3_client, BUCKET, REGION
+from athena_client import run_query, get_s3_client, BUCKET, REGION
 
 MIN_HISTORY_DAYS = 30
 FEATURES_S3_KEY  = "ml/features/features.parquet"
@@ -59,7 +59,7 @@ SQL_SALES = """
         CAST(day_of_week           AS INTEGER) AS day_of_week,
         CAST(sale_month            AS INTEGER) AS month_of_year,
         CAST(sale_day              AS INTEGER) AS day_of_month
-    FROM retailops.fct_daily_sales
+    FROM retailops_marts.fct_daily_sales
     ORDER BY store_id, product_id, sale_date
 """
 
@@ -73,7 +73,7 @@ SQL_INVENTORY = """
         CAST(reorder_point            AS DOUBLE)  AS reorder_point,
         CAST(is_out_of_stock          AS BOOLEAN) AS is_out_of_stock,
         CAST(needs_reorder            AS BOOLEAN) AS needs_reorder
-    FROM retailops.fct_inventory_snapshots
+    FROM retailops_marts.fct_inventory_snapshots
     ORDER BY store_id, product_id, snapshot_date
 """
 
@@ -84,8 +84,8 @@ SQL_SUPPLIER = """
         CAST(sp.avg_actual_lead_time_days AS DOUBLE) AS avg_actual_lead_time_days,
         CAST(sp.calculated_on_time_rate   AS DOUBLE) AS calculated_on_time_rate,
         CAST(sp.avg_fill_rate             AS DOUBLE) AS avg_fill_rate
-    FROM retailops.dim_products p
-    LEFT JOIN retailops.mart_supplier_performance sp
+    FROM retailops_marts.dim_products p
+    LEFT JOIN retailops_marts.mart_supplier_performance sp
       ON p.supplier_id = sp.supplier_id
 """
 

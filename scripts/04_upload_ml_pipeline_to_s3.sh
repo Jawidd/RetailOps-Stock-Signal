@@ -30,14 +30,15 @@ echo "Target : s3://${BUCKET}/${S3_KEY}"
 # Remove stale zip if present
 rm -f "$TMP_ZIP"
 
-# Zip the ml/ directory under a top-level folder called ml_pipeline
-# so the ECS container finds it at /tmp/ml_pipeline/ml_pipeline/
-cd "$REPO_ROOT"
-zip -r "$TMP_ZIP" ml/ \
-  --exclude "ml/__pycache__/*" \
-  --exclude "ml/*.pyc" \
-  --exclude "ml/notebooks/*" \
-  --exclude "ml/.ipynb_checkpoints/*"
+# Zip the contents of ml/ directly (no top-level folder) so the ECS container
+# finds run_pipeline.py at /tmp/ml_pipeline/run_pipeline.py, matching
+# PIPELINE_DIR=/tmp/ml_pipeline in retops-ecs-ml.yaml.
+cd "$REPO_ROOT/ml"
+zip -r "$TMP_ZIP" . \
+  --exclude "__pycache__/*" \
+  --exclude "*.pyc" \
+  --exclude "notebooks/*" \
+  --exclude ".ipynb_checkpoints/*"
 
 echo "=== Uploading to S3 ==="
 aws s3 cp "$TMP_ZIP" "s3://${BUCKET}/${S3_KEY}" --region "$REGION"

@@ -60,10 +60,10 @@ def main():
     os.environ["PIPELINE_DATE"] = pipeline_date
 
     stages = [
-        ("Feature Engineering", "ml.features",                "build_features"),
-        ("Model Training",      "ml.train",                   "train"),
-        ("Evaluation",          "ml.evaluate",                "evaluate"),
-        ("Reorder Recommendations", "ml.reorder_recommendations", "generate_recommendations"),
+        ("Feature Engineering",      "features",                "build_features"),
+        ("Model Training",            "train",                   "train"),
+        ("Evaluation",               "evaluate",                "evaluate"),
+        ("Reorder Recommendations",  "reorder_recommendations", "generate_recommendations"),
     ]
 
     for stage_name, module_path, fn_name in stages:

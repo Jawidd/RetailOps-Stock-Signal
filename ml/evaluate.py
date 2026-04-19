@@ -23,8 +23,8 @@ import shap
 from datetime import datetime, date
 from pathlib import Path
 
-from ml.athena_client import get_s3_client, BUCKET
-from ml.train import (
+from athena_client import get_s3_client, BUCKET
+from train import (
     FEATURE_COLS, CATEGORICAL_COLS, N_HORIZONS, MODEL_VERSION,
     MODEL_S3_PREFIX, FEATURES_S3_KEY, FOLDS,
     wape, rmse, bias, fva, make_lgb_dataset,

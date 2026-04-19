@@ -12,8 +12,11 @@ RUN pip install --no-cache-dir \
     pandas==2.2.3 \
     joblib==1.4.2 \
     boto3 \
-    pyarrow
-
+    pyarrow \
+    python-dotenv==1.0.1 \
+    optuna==3.6.1 \
+    shap==0.45.1 \
+    scipy==1.13.1
 
 WORKDIR /app
 CMD ["bash"]
