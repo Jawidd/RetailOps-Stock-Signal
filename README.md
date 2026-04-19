@@ -124,6 +124,7 @@ s3://retailops-data-lake-eu-west-2/
 - Foreign key relationships validated across all fact-to-dimension joins
 - Business rule enforcement: quantities ≥ 0, prices > 0, rates between 0 and 1
 - Source-level NOT NULL constraints on all primary and foreign keys
+- Data coverage test in interval: (2025-07-01 -> 2026-02-10)
 
 ---
 
