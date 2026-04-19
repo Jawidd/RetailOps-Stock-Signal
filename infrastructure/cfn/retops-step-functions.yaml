@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "RetailOps Step Functions pipeline (Lambda -> ECS dbt -> Athena -> SNS) + daily EventBridge schedule"
+Description: "RetailOps Step Functions pipeline (Lambda -> ECS dbt -> Athena -> ECS ML -> SNS) + daily EventBridge schedule"
 
 Parameters:
   ProjectNameInput:
@@ -131,7 +131,7 @@ Resources:
                 Resource: "*"
 
 
-  # State machine: GenerateData -> RunDbt -> AthenaValidation -> NotifySuccess
+  # State machine: GenerateData -> RunDbt -> AthenaValidation -> RunMlPipeline -> NotifySuccess
   RetailOpsPipelineStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
@@ -140,7 +140,7 @@ Resources:
       DefinitionString: !Sub
         - |
           {
-            "Comment": "RetailOps pipeline: Lambda -> ECS dbt -> Athena -> SNS",
+            "Comment": "RetailOps pipeline: Lambda -> ECS dbt -> Athena -> ECS ML -> SNS",
             "StartAt": "ExtractDate",
             "States": {
               "ExtractDate": {
@@ -199,6 +199,41 @@ Resources:
                   }
                 },
                 "ResultPath": "$.athenaCheck",
+                "Next": "RunMlPipeline",
+                "Catch": [
+                  { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
+                ]
+              },
+
+              "RunMlPipeline": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::ecs:runTask.sync",
+                "Parameters": {
+                  "Cluster": "${DbtClusterArn}",
+                  "TaskDefinition": "${MlTaskDefinitionFamily}",
+                  "LaunchType": "FARGATE",
+                  "NetworkConfiguration": {
+                    "AwsvpcConfiguration": {
+                      "Subnets": ["${SubnetA}", "${SubnetB}"],
+                      "SecurityGroups": ["${SecurityGroupId}"],
+                      "AssignPublicIp": "ENABLED"
+                    }
+                  },
+                  "Overrides": {
+                    "ContainerOverrides": [
+                      {
+                        "Name": "ml",
+                        "Environment": [
+                          {
+                            "Name": "PIPELINE_DATE",
+                            "Value.$": "$.date"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "ResultPath": "$.ml",
                 "Next": "NotifySuccess",
                 "Catch": [
                   { "ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "NotifyFailure" }
@@ -211,7 +246,7 @@ Resources:
                 "Parameters": {
                   "TopicArn": "${SuccessTopicArn}",
                   "Subject": "RetailOps Pipeline Success",
-                  "Message.$": "States.Format('Pipeline succeeded. date={}', $.date)"
+                  "Message.$": "States.Format('Pipeline succeeded. date={} — dbt + ML complete.', $.date)"
                 },
                 "End": true
               },
@@ -238,6 +273,7 @@ Resources:
             DataGenArn: !ImportValue retailops-DataGeneratorLambdaArn,
             DbtClusterArn: !ImportValue retailops-DbtClusterArn,
             DbtTaskDefinitionFamily: !ImportValue retailops-DbtTaskDefinitionFamily,
+            MlTaskDefinitionFamily: !ImportValue retailops-MlTaskDefinitionFamily,
             WorkGroupName: !ImportValue retailops-AthenaWorkGroupName,
             AthenaResultsBucket: !ImportValue AthenaQueryResultsBucketName,
             SuccessTopicArn: !Ref PipelineSuccessTopic,
