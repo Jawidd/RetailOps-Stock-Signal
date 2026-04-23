@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash unzip ca-certificates \
+    bash unzip ca-certificates libgomp1 \
   && rm -rf /var/lib/apt/lists/*
 
 # ML dependencies

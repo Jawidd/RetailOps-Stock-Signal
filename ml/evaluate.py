@@ -47,8 +47,16 @@ def _pipeline_date() -> str:
 def load_models() -> dict:
     s3 = get_s3_client()
     key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}.pkl"
-    obj = s3.get_object(Bucket=BUCKET, Key=key)
-    return pickle.loads(obj["Body"].read())
+    for attempt in range(3):
+        try:
+            obj = s3.get_object(Bucket=BUCKET, Key=key)
+            return pickle.loads(obj["Body"].read())
+        except Exception as e:
+            if attempt == 2:
+                raise
+            import time
+            print(f"  load_models attempt {attempt+1} failed ({e}), retrying...")
+            time.sleep(5)
 
 
 def load_metadata() -> dict:
@@ -98,7 +106,7 @@ def full_walkforward_eval(models: dict, df: pd.DataFrame,
             # retrain on this fold's training window for honest evaluation
             m = lgb.LGBMRegressor(
                 **{k: v for k, v in models[h].get_params().items()
-                   if k not in ("n_estimators",)},
+                   if k not in ("n_estimators", "random_state", "verbose")},
                 n_estimators=500, random_state=42, verbose=-1
             )
             m.fit(X_tr, y_tr)
@@ -143,7 +151,7 @@ def segment_error_analysis(models: dict, df: pd.DataFrame,
 
     m = lgb.LGBMRegressor(
         **{k: v for k, v in models[1].get_params().items()
-           if k not in ("n_estimators",)},
+           if k not in ("n_estimators", "random_state", "verbose")},
         n_estimators=500, random_state=42, verbose=-1
     )
     m.fit(X_tr, y_tr)
@@ -201,7 +209,7 @@ def run_shap_analysis(models: dict, df: pd.DataFrame,
 
     m = lgb.LGBMRegressor(
         **{k: v for k, v in models[1].get_params().items()
-           if k not in ("n_estimators",)},
+           if k not in ("n_estimators", "random_state", "verbose")},
         n_estimators=500, random_state=42, verbose=-1
     )
     m.fit(X_tr, y_tr)
