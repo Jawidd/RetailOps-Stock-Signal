@@ -69,6 +69,15 @@ from train import (
 
 SERVICE_LEVEL_Z = 1.65   # 95 % service level
 RECS_S3_PREFIX  = "ml/reorder_recommendations"
+ML_LOCAL_ARTIFACT_DIR = os.getenv("ML_LOCAL_ARTIFACT_DIR", "").strip()
+if ML_LOCAL_ARTIFACT_DIR:
+    LOCAL_MODEL_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / f"demand_forecast_lgbm_{MODEL_VERSION}.pkl"
+    LOCAL_FEATURES_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / "ml_features.parquet"
+    LOCAL_RECS_DIR = Path(ML_LOCAL_ARTIFACT_DIR) / "ml_reorder_recommendations"
+else:
+    LOCAL_MODEL_PATH = None
+    LOCAL_FEATURES_PATH = None
+    LOCAL_RECS_DIR = None
 
 SQL_LATEST_INVENTORY = """
     SELECT
@@ -99,6 +108,11 @@ def _pipeline_date() -> str:
 
 
 def load_models() -> dict:
+    if LOCAL_MODEL_PATH is not None and LOCAL_MODEL_PATH.exists():
+        print(f"  Loading model from local file: {LOCAL_MODEL_PATH}")
+        with open(LOCAL_MODEL_PATH, "rb") as f:
+            return pickle.load(f)
+
     s3  = get_s3_client()
     key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}.pkl"
     obj = s3.get_object(Bucket=BUCKET, Key=key)
@@ -106,9 +120,13 @@ def load_models() -> dict:
 
 
 def load_features() -> pd.DataFrame:
-    s3  = get_s3_client()
-    obj = s3.get_object(Bucket=BUCKET, Key=FEATURES_S3_KEY)
-    df  = pd.read_parquet(io.BytesIO(obj["Body"].read()))
+    if LOCAL_FEATURES_PATH is not None and LOCAL_FEATURES_PATH.exists():
+        print(f"  Loading features from local file: {LOCAL_FEATURES_PATH}")
+        df = pd.read_parquet(LOCAL_FEATURES_PATH)
+    else:
+        s3  = get_s3_client()
+        obj = s3.get_object(Bucket=BUCKET, Key=FEATURES_S3_KEY)
+        df  = pd.read_parquet(io.BytesIO(obj["Body"].read()))
     df["date"] = pd.to_datetime(df["date"])
     for col in FEATURE_COLS:
         if col in df.columns:
@@ -270,14 +288,19 @@ def generate_recommendations() -> pd.DataFrame:
         "reorder_point_ml", "recommended_order_qty",
     ]].to_string(index=False))
 
-    # --- write to S3 ---
     pipeline_date = _pipeline_date()
-    key = f"{RECS_S3_PREFIX}/dt={pipeline_date}/recommendations.parquet"
-    buf = io.BytesIO()
-    recs.to_parquet(buf, index=False, engine="pyarrow")
-    buf.seek(0)
-    get_s3_client().put_object(Bucket=BUCKET, Key=key, Body=buf.getvalue())
-    print(f"\n  Recommendations written -> s3://{BUCKET}/{key}")
+    if LOCAL_RECS_DIR is not None:
+        LOCAL_RECS_DIR.mkdir(parents=True, exist_ok=True)
+        local_rec_path = LOCAL_RECS_DIR / f"recommendations_{pipeline_date}.parquet"
+        recs.to_parquet(local_rec_path, index=False, engine="pyarrow")
+        print(f"\n  Recommendations written -> {local_rec_path}")
+    else:
+        key = f"{RECS_S3_PREFIX}/dt={pipeline_date}/recommendations.parquet"
+        buf = io.BytesIO()
+        recs.to_parquet(buf, index=False, engine="pyarrow")
+        buf.seek(0)
+        get_s3_client().put_object(Bucket=BUCKET, Key=key, Body=buf.getvalue())
+        print(f"\n  Recommendations written -> s3://{BUCKET}/{key}")
 
     return recs
 

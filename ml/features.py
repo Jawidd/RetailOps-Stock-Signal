@@ -28,6 +28,7 @@ Design decisions
 """
 
 import io
+import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -37,6 +38,13 @@ from athena_client import run_query, get_s3_client, BUCKET, REGION
 
 MIN_HISTORY_DAYS = 30
 FEATURES_S3_KEY  = "ml/features/features.parquet"
+ML_SAMPLE_FRACTION = float(os.getenv("ML_SAMPLE_FRACTION", "1.0"))
+ML_LOCAL_ARTIFACT_DIR = os.getenv("ML_LOCAL_ARTIFACT_DIR", "").strip()
+
+if ML_LOCAL_ARTIFACT_DIR:
+    LOCAL_FEATURES_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / "ml_features.parquet"
+else:
+    LOCAL_FEATURES_PATH = None
 
 
 # ---------------------------------------------------------------------------
@@ -257,8 +265,46 @@ def build_features() -> pd.DataFrame:
     print("FEATURE ENGINEERING PIPELINE")
     print("=" * 70)
 
-    print("\n[1/4] Loading sales history from Athena …")
-    sales_raw = run_query(SQL_SALES, "fct_daily_sales")
+    # Approximate row counts for sampling (to avoid count queries)
+    approx_sales_rows = 150000
+    approx_inventory_rows = 500000
+    approx_supplier_rows = 1000
+
+    # Modify SQL for sampling if needed
+    sales_sql = SQL_SALES
+    inventory_sql = SQL_INVENTORY
+    supplier_sql = SQL_SUPPLIER
+
+    if 0 < ML_SAMPLE_FRACTION < 1.0:
+        supplier_limit = int(approx_supplier_rows * ML_SAMPLE_FRACTION)
+        # Sample suppliers/products first, then filter sales/inventory to those products
+        supplier_sql = SQL_SUPPLIER.rstrip() + f"\nORDER BY RANDOM() LIMIT {supplier_limit}"
+        print(f"  Using approximate sampling: supplier LIMIT {supplier_limit}, then filter sales/inventory to those products")
+    else:
+        supplier_sql = SQL_SUPPLIER
+
+    print("\n[1/4] Loading supplier features from Athena …")
+    sup_raw = run_query(supplier_sql, "dim_products + mart_supplier_performance")
+    for col in ["avg_actual_lead_time_days", "calculated_on_time_rate", "avg_fill_rate"]:
+        sup_raw[col] = pd.to_numeric(sup_raw[col], errors="coerce")
+
+    if 0 < ML_SAMPLE_FRACTION < 1.0:
+        sampled_products = set(sup_raw["product_id"].unique())
+        product_list = ",".join(f"'{p}'" for p in sampled_products)
+        sales_sql = SQL_SALES.replace(
+            "FROM retailops_marts.fct_daily_sales",
+            f"FROM retailops_marts.fct_daily_sales WHERE product_id IN ({product_list})"
+        )
+        inventory_sql = SQL_INVENTORY.replace(
+            "FROM retailops_marts.fct_inventory_snapshots",
+            f"FROM retailops_marts.fct_inventory_snapshots WHERE product_id IN ({product_list})"
+        )
+        print(f"     sampled {len(sampled_products)} products from {len(sup_raw)} suppliers")
+        print(f"     sales_sql: {sales_sql[:200]}...")
+        print(f"     inventory_sql: {inventory_sql[:200]}...")
+
+    print("\n[2/4] Loading sales history from Athena …")
+    sales_raw = run_query(sales_sql, "fct_daily_sales")
     sales_raw["sale_date"] = pd.to_datetime(sales_raw["sale_date"])
     for col in ["quantity_sold", "unit_price", "discount_amount", "net_amount"]:
         sales_raw[col] = pd.to_numeric(sales_raw[col], errors="coerce").fillna(0)
@@ -268,12 +314,8 @@ def build_features() -> pd.DataFrame:
         {"true": True, "false": False, "True": True, "False": False}
     ).fillna(False)
 
-    print(f"     {sales_raw['store_id'].nunique()} stores, "
-          f"{sales_raw['product_id'].nunique()} products, "
-          f"{sales_raw['sale_date'].nunique()} days")
-
-    print("\n[2/4] Loading inventory snapshots from Athena …")
-    inv_raw = run_query(SQL_INVENTORY, "fct_inventory_snapshots")
+    print("\n[3/4] Loading inventory snapshots from Athena …")
+    inv_raw = run_query(inventory_sql, "fct_inventory_snapshots")
     inv_raw["snapshot_date"] = pd.to_datetime(inv_raw["snapshot_date"])
     for col in ["quantity_on_hand", "quantity_on_order", "reorder_point"]:
         inv_raw[col] = pd.to_numeric(inv_raw[col], errors="coerce").fillna(0)
@@ -283,11 +325,6 @@ def build_features() -> pd.DataFrame:
     inv_raw["needs_reorder"] = inv_raw["needs_reorder"].map(
         {"true": True, "false": False, "True": True, "False": False}
     ).fillna(False)
-
-    print("\n[3/4] Loading supplier features from Athena …")
-    sup_raw = run_query(SQL_SUPPLIER, "dim_products + mart_supplier_performance")
-    for col in ["avg_actual_lead_time_days", "calculated_on_time_rate", "avg_fill_rate"]:
-        sup_raw[col] = pd.to_numeric(sup_raw[col], errors="coerce")
 
     print("\n[4/4] Building features …")
     demand_feat = build_demand_features(sales_raw)
@@ -325,12 +362,16 @@ def build_features() -> pd.DataFrame:
     print(f"     Date range: {features['date'].min().date()} -> {features['date'].max().date()}")
     print(f"     Store-product pairs: {features.groupby(['store_id','product_id']).ngroups:,}")
 
-    # --- write to S3 ---
-    print(f"\n     Writing to s3://{BUCKET}/{FEATURES_S3_KEY} …")
-    buf = io.BytesIO()
-    features.to_parquet(buf, index=False, engine="pyarrow")
-    buf.seek(0)
-    get_s3_client().put_object(Bucket=BUCKET, Key=FEATURES_S3_KEY, Body=buf.getvalue())
+    if LOCAL_FEATURES_PATH is not None:
+        Path(ML_LOCAL_ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
+        print(f"\n     Writing local features -> {LOCAL_FEATURES_PATH}")
+        features.to_parquet(LOCAL_FEATURES_PATH, index=False, engine="pyarrow")
+    else:
+        print(f"\n     Writing to s3://{BUCKET}/{FEATURES_S3_KEY} …")
+        buf = io.BytesIO()
+        features.to_parquet(buf, index=False, engine="pyarrow")
+        buf.seek(0)
+        get_s3_client().put_object(Bucket=BUCKET, Key=FEATURES_S3_KEY, Body=buf.getvalue())
     print("     Done.")
 
     return features

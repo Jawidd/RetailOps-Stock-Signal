@@ -4,7 +4,7 @@ ml/run_pipeline.py
 ECS entrypoint for the ML pipeline.
 
 Called by the ECS task command:
-    python run_pipeline.py [--date YYYY-MM-DD]
+    python run_pipeline.py [--date YYYY-MM-DD] [--sample-frac 0.01] [--local-artifacts ./tmp]
 
 Runs the four ML stages in order:
     1. features.py   — feature engineering from Athena mart tables
@@ -46,12 +46,33 @@ def main():
         default=None,
         help="Pipeline date (YYYY-MM-DD). Defaults to PIPELINE_DATE env var or today UTC.",
     )
+    parser.add_argument(
+        "--sample-frac",
+        type=float,
+        default=None,
+        help="Optional sample fraction for feature engineering (e.g. 0.01 for 1%).",
+    )
+    parser.add_argument(
+        "--local-artifacts",
+        type=str,
+        default=None,
+        help="Optional local path to write and read ML artifacts instead of S3.",
+    )
     args = parser.parse_args()
     pipeline_date = _resolve_date(args.date)
+
+    if args.sample_frac is not None:
+        os.environ["ML_SAMPLE_FRACTION"] = str(args.sample_frac)
+    if args.local_artifacts:
+        os.environ["ML_LOCAL_ARTIFACT_DIR"] = args.local_artifacts
 
     print("=" * 70)
     print("RETAILOPS ML PIPELINE")
     print(f"Pipeline date : {pipeline_date}")
+    if args.sample_frac is not None:
+        print(f"Sample fraction: {args.sample_frac}")
+    if args.local_artifacts:
+        print(f"Local artifacts: {args.local_artifacts}")
     print(f"Started at    : {datetime.now(timezone.utc).isoformat()}")
     print("=" * 70)
 

@@ -41,6 +41,7 @@ Model: LightGBM direct multi-step
 
 import io
 import json
+import os
 import pickle
 import warnings
 import numpy as np
@@ -61,6 +62,16 @@ MODEL_VERSION     = "v1"
 MODEL_S3_PREFIX   = "ml/models"
 N_HORIZONS        = 7
 N_OPTUNA_TRIALS   = 50
+
+ML_LOCAL_ARTIFACT_DIR = os.getenv("ML_LOCAL_ARTIFACT_DIR", "").strip()
+if ML_LOCAL_ARTIFACT_DIR:
+    LOCAL_FEATURES_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / "ml_features.parquet"
+    LOCAL_MODEL_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / f"demand_forecast_lgbm_{MODEL_VERSION}.pkl"
+    LOCAL_METADATA_PATH = Path(ML_LOCAL_ARTIFACT_DIR) / f"demand_forecast_lgbm_{MODEL_VERSION}_metadata.json"
+else:
+    LOCAL_FEATURES_PATH = None
+    LOCAL_MODEL_PATH = None
+    LOCAL_METADATA_PATH = None
 
 FEATURE_COLS = [
     "lag_1", "lag_7", "lag_14", "lag_28",
@@ -274,10 +285,15 @@ def make_objective(df: pd.DataFrame, day0: pd.Timestamp):
 # ---------------------------------------------------------------------------
 
 def load_features() -> pd.DataFrame:
-    print("  Loading features from S3 …")
-    s3 = get_s3_client()
-    obj = s3.get_object(Bucket=BUCKET, Key=FEATURES_S3_KEY)
-    df = pd.read_parquet(io.BytesIO(obj["Body"].read()))
+    if LOCAL_FEATURES_PATH is not None and LOCAL_FEATURES_PATH.exists():
+        print(f"  Loading features from local file: {LOCAL_FEATURES_PATH}")
+        df = pd.read_parquet(LOCAL_FEATURES_PATH)
+    else:
+        print("  Loading features from S3 …")
+        s3 = get_s3_client()
+        obj = s3.get_object(Bucket=BUCKET, Key=FEATURES_S3_KEY)
+        df = pd.read_parquet(io.BytesIO(obj["Body"].read()))
+
     df["date"] = pd.to_datetime(df["date"])
     for col in FEATURE_COLS:
         if col in df.columns:
@@ -360,15 +376,6 @@ def train():
                   f"  RMSE={cv_metrics[f'h{h}']['rmse']:.3f}"
                   f"  FVA={cv_metrics[f'h{h}']['fva']:.3f}")
 
-    # --- save to S3 ---
-    s3 = get_s3_client()
-
-    model_key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}.pkl"
-    buf = io.BytesIO()
-    pickle.dump(models, buf)
-    buf.seek(0)
-    s3.put_object(Bucket=BUCKET, Key=model_key, Body=buf.getvalue())
-
     metadata = {
         "model_version":   MODEL_VERSION,
         "trained_at":      datetime.utcnow().isoformat(),
@@ -387,14 +394,32 @@ def train():
         "n_rows":  len(df_train),
         "n_pairs": df_train.groupby(["store_id", "product_id"]).ngroups,
     }
-    meta_key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}_metadata.json"
-    s3.put_object(
-        Bucket=BUCKET, Key=meta_key,
-        Body=json.dumps(metadata, indent=2).encode()
-    )
 
-    print(f"\n  Model saved    → s3://{BUCKET}/{model_key}")
-    print(f"  Metadata saved → s3://{BUCKET}/{meta_key}")
+    if LOCAL_MODEL_PATH is not None:
+        Path(ML_LOCAL_ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
+        print(f"\n  Saving local model -> {LOCAL_MODEL_PATH}")
+        with open(LOCAL_MODEL_PATH, "wb") as f:
+            pickle.dump(models, f)
+        with open(LOCAL_METADATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+        print(f"\n  Model saved    -> {LOCAL_MODEL_PATH}")
+        print(f"  Metadata saved -> {LOCAL_METADATA_PATH}")
+    else:
+        s3 = get_s3_client()
+        model_key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}.pkl"
+        buf = io.BytesIO()
+        pickle.dump(models, buf)
+        buf.seek(0)
+        s3.put_object(Bucket=BUCKET, Key=model_key, Body=buf.getvalue())
+
+        meta_key = f"{MODEL_S3_PREFIX}/demand_forecast_lgbm_{MODEL_VERSION}_metadata.json"
+        s3.put_object(
+            Bucket=BUCKET, Key=meta_key,
+            Body=json.dumps(metadata, indent=2).encode()
+        )
+        print(f"\n  Model saved    → s3://{BUCKET}/{model_key}")
+        print(f"  Metadata saved → s3://{BUCKET}/{meta_key}")
+
     print("\nTraining complete.")
     return models, metadata
 

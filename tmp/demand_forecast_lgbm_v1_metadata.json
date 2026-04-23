@@ -1,0 +1,87 @@
+{
+  "model_version": "v1",
+  "trained_at": "2026-04-23T19:58:35.025939",
+  "n_horizons": 7,
+  "feature_cols": [
+    "lag_1",
+    "lag_7",
+    "lag_14",
+    "lag_28",
+    "roll_mean_7",
+    "roll_std_7",
+    "roll_min_7",
+    "roll_max_7",
+    "roll_mean_14",
+    "roll_std_14",
+    "roll_min_14",
+    "roll_max_14",
+    "roll_mean_28",
+    "roll_std_28",
+    "roll_min_28",
+    "roll_max_28",
+    "ewm_mean_7",
+    "ewm_mean_14",
+    "demand_trend_14d",
+    "has_discount",
+    "discount_pct",
+    "price_vs_30d_avg",
+    "days_since_period_start",
+    "day_of_week",
+    "month_of_year",
+    "is_weekend",
+    "quantity_on_hand",
+    "quantity_on_order",
+    "reorder_point",
+    "needs_reorder",
+    "stockout_freq_14d",
+    "days_of_stock_remaining",
+    "avg_actual_lead_time_days",
+    "calculated_on_time_rate",
+    "avg_fill_rate",
+    "region_avg_demand_7d"
+  ],
+  "categorical_cols": [
+    "store_id",
+    "product_id",
+    "region",
+    "store_type",
+    "category"
+  ],
+  "best_params": {
+    "num_leaves": 113,
+    "learning_rate": 0.06598713114487713,
+    "min_child_samples": 22,
+    "feature_fraction": 0.9385120515287855,
+    "bagging_fraction": 0.7447439543868675,
+    "reg_alpha": 0.007992268273339558,
+    "reg_lambda": 0.0011639010490358296,
+    "objective": "regression_l1",
+    "bagging_freq": 1
+  },
+  "optuna_best_wape": 0.24585804211928436,
+  "cv_metrics": {},
+  "baseline_metrics": {
+    "naive": {
+      "wape": NaN,
+      "rmse": NaN,
+      "bias": NaN
+    },
+    "seasonal_naive": {
+      "wape": NaN,
+      "rmse": NaN,
+      "bias": NaN
+    },
+    "rolling_mean": {
+      "wape": NaN,
+      "rmse": NaN,
+      "bias": NaN
+    }
+  },
+  "training_date_range": {
+    "min": "2025-09-02",
+    "max": "2026-02-11"
+  },
+  "inference_from": "2026-04-17",
+  "n_rows": 3242,
+  "n_pairs": 121
+}
