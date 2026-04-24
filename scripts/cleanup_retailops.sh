@@ -80,7 +80,7 @@ read -r -p "Type 'yes' to confirm: " CONFIRM
 # =============================================================================
 
 # Empty an S3 bucket: all objects, then all versions + delete markers.
-# CloudFormation cannot delete a non-empty bucket.
+# Uses Python + boto3 to avoid shell argument length limits on large buckets.
 empty_bucket() {
   local bucket="$1"
 
@@ -89,33 +89,35 @@ empty_bucket() {
     return
   fi
 
-  echo -n "    Removing objects from s3://${bucket} … "
-  aws s3 rm "s3://${bucket}" --recursive --region "$REGION" --quiet 2>/dev/null || true
-  echo "done."
+  echo -n "    Emptying s3://${bucket} … "
+  python3 - "$bucket" "$REGION" <<'PY'
+import sys, boto3
 
-  echo -n "    Removing versions + delete markers … "
-  while true; do
-    BATCH=$(aws s3api list-object-versions \
-      --bucket "$bucket" --region "$REGION" \
-      --output json \
-      --query '{V:Versions[].{Key:Key,VersionId:VersionId},D:DeleteMarkers[].{Key:Key,VersionId:VersionId}}' \
-      2>/dev/null || echo '{"V":[],"D":[]}')
+bucket, region = sys.argv[1], sys.argv[2]
+s3 = boto3.client("s3", region_name=region)
 
-    ITEMS=$(python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-items = (d.get('V') or []) + (d.get('D') or [])
-print(json.dumps(items))
-" <<< "$BATCH")
+# 1. Delete all current objects
+paginator = s3.get_paginator("list_objects_v2")
+for page in paginator.paginate(Bucket=bucket):
+    objects = [{"Key": o["Key"]} for o in page.get("Contents", [])]
+    if objects:
+        s3.delete_objects(Bucket=bucket, Delete={"Objects": objects, "Quiet": True})
+        print(f"  deleted {len(objects)} objects", flush=True)
 
-    [[ "$ITEMS" == "[]" ]] && break
+# 2. Delete all versions and delete markers
+paginator = s3.get_paginator("list_object_versions")
+for page in paginator.paginate(Bucket=bucket):
+    items = [
+        {"Key": v["Key"], "VersionId": v["VersionId"]}
+        for v in page.get("Versions", []) + page.get("DeleteMarkers", [])
+    ]
+    if items:
+        s3.delete_objects(Bucket=bucket, Delete={"Objects": items, "Quiet": True})
+        print(f"  deleted {len(items)} versions/markers", flush=True)
 
-    aws s3api delete-objects \
-      --bucket "$bucket" --region "$REGION" \
-      --delete "{\"Objects\": ${ITEMS}, \"Quiet\": true}" > /dev/null
-  done
-  echo "done."
-  info "s3://${bucket} is empty."
+print("  bucket is empty.")
+PY
+  info "s3://${bucket} emptied."
 }
 
 # Delete a CloudFormation stack and wait for completion.
